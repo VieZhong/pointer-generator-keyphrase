@@ -84,8 +84,8 @@ class BeamSearchDecoder(object):
         assert FLAGS.single_pass, "Dataset exhausted, but we are not in single_pass mode"
         tf.logging.info("Decoder has finished reading dataset for single_pass.")
         tf.logging.info("Output has been saved in %s and %s. Now starting ROUGE eval...", self._rouge_ref_dir, self._rouge_dec_dir)
-        results_dict = rouge_eval(self._rouge_ref_dir, self._rouge_dec_dir)
-        rouge_log(results_dict, self._decode_dir)
+        f1_score = f1_score_eval(self._rouge_ref_dir, self._rouge_dec_dir)
+        f1_score_log(f1_score, self._decode_dir)
         return
 
       original_article = batch.original_articles[0]  # string
@@ -96,19 +96,37 @@ class BeamSearchDecoder(object):
       abstract_withunks = data.show_abs_oovs(original_abstract, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None)) # string
 
       # Run beam search to get best Hypothesis
-      best_hyp = beam_search.run_beam_search(self._sess, self._model, self._vocab, batch)
+      all_hyp = beam_search.run_beam_search(self._sess, self._model, self._vocab, batch)
+      best_hyp = all_hyp[0]
 
-      # Extract the output ids from the hypothesis and convert back to words
-      output_ids = [int(t) for t in best_hyp.tokens[1:]]
-      decoded_words = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
+      i = 0;
+      decoded_words = []
+      for hyp in all_hyp:
+        if(i < 5):
+          i = i + 1
+        # Extract the output ids from the hypothesis and convert back to words
+        output_ids = [int(t) for t in hyp.tokens[1:]]
+        decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
 
-      # Remove the [STOP] token from decoded_words, if necessary
-      try:
-        fst_stop_idx = decoded_words.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
-        decoded_words = decoded_words[:fst_stop_idx]
-      except ValueError:
-        decoded_words = decoded_words
-      decoded_output = ' '.join(decoded_words) # single string
+        # Remove the [STOP] token from decoded_words, if necessary
+        try:
+          fst_stop_idx = decoded_words_1.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
+          decoded_words.extend(decoded_words_1[:fst_stop_idx])
+        except ValueError:
+          decoded_words.extend(decoded_words_1)
+      decoded_output = ' '.join(decoded_words) # single string          
+
+      # # Extract the output ids from the hypothesis and convert back to words
+      # output_ids = [int(t) for t in best_hyp.tokens[1:]]
+      # decoded_words = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
+
+      # # Remove the [STOP] token from decoded_words, if necessary
+      # try:
+      #   fst_stop_idx = decoded_words.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
+      #   decoded_words = decoded_words[:fst_stop_idx]
+      # except ValueError:
+      #   decoded_words = decoded_words
+      # decoded_output = ' '.join(decoded_words) # single string
 
       if FLAGS.single_pass:
         self.write_for_rouge(original_abstract_sents, decoded_words, counter) # write ref summary and decoded summary to file, to eval with pyrouge later
@@ -205,38 +223,78 @@ def make_html_safe(s):
   return s
 
 
-def rouge_eval(ref_dir, dec_dir):
-  """Evaluate the files in ref_dir and dec_dir with pyrouge, returning results_dict"""
-  r = pyrouge.Rouge155()
-  r.model_filename_pattern = '#ID#_reference.txt'
-  r.system_filename_pattern = '(\d+)_decoded.txt'
-  r.model_dir = ref_dir
-  r.system_dir = dec_dir
-  logging.getLogger('global').setLevel(logging.WARNING) # silence pyrouge logging
-  rouge_results = r.convert_and_evaluate()
-  return r.output_to_dict(rouge_results)
+def read_text_file(text_file):
+  words = []
+  with open(text_file, "r", encoding='utf-8') as f:
+    for line in f:
+      words.extend(line.strip().split())
+  return words
 
 
-def rouge_log(results_dict, dir_to_write):
+def get_f1_score(ref_words, dec_words):
+  total_ref = len(ref_words)
+  total_dec = len(dec_words)
+  num_overlap = 0
+  for w in dec_words:
+    if w in ref_words:
+      num_overlap = num_overlap + 1
+  if num_overlap < 1 or total_ref < 1 or total_dec < 1:
+    return 0
+  recall = num_overlap / total_ref
+  precision = num_overlap / total_dec
+  return 2.0 * precision * recall / (precision + recall)
+
+
+def f1_score_eval(ref_dir, dec_dir):
+  # "%06d_reference.txt", "%06d_decoded.txt"
+  ref_files = os.listdir(ref_dir)
+  dec_files = os.listdir(dec_dir)
+
+  f1_score_result = []
+  for ref_file in ref_files:
+    name = ref_file.split('_')[0]
+    dec_file = ("%s_decoded.txt" % name)
+    if dec_file in dec_files:
+      ref_words = read_text_file(os.path.join(ref_dir, ref_file))
+      dec_words = read_text_file(os.path.join(dec_dir, dec_file))
+      f1_score_result.append(get_f1_score(ref_words, dec_words))
+  if len(f1_score_result) < 1:
+    return 0.0
+  return sum(f1_score_result) / len(f1_score_result)
+
+
+# def rouge_eval(ref_dir, dec_dir):
+#   """Evaluate the files in ref_dir and dec_dir with pyrouge, returning results_dict"""
+#   r = pyrouge.Rouge155()
+#   r.model_filename_pattern = '#ID#_reference.txt'
+#   r.system_filename_pattern = '(\d+)_decoded.txt'
+#   r.model_dir = ref_dir
+#   r.system_dir = dec_dir
+#   logging.getLogger('global').setLevel(logging.WARNING) # silence pyrouge logging
+#   rouge_results = r.convert_and_evaluate()
+#   return r.output_to_dict(rouge_results)
+
+
+def f1_score_log(result, dir_to_write):
   """Log ROUGE results to screen and write to file.
 
   Args:
     results_dict: the dictionary returned by pyrouge
     dir_to_write: the directory where we will write the results to"""
-  log_str = ""
-  for x in ["1","2","l"]:
-    log_str += "\nROUGE-%s:\n" % x
-    for y in ["f_score", "recall", "precision"]:
-      key = "rouge_%s_%s" % (x,y)
-      key_cb = key + "_cb"
-      key_ce = key + "_ce"
-      val = results_dict[key]
-      val_cb = results_dict[key_cb]
-      val_ce = results_dict[key_ce]
-      log_str += "%s: %.4f with confidence interval (%.4f, %.4f)\n" % (key, val, val_cb, val_ce)
+  log_str = ("f1 score: %s" % result)
+  # for x in ["1","2","l"]:
+  #   log_str += "\nROUGE-%s:\n" % x
+  #   for y in ["f_score", "recall", "precision"]:
+  #     key = "rouge_%s_%s" % (x,y)
+  #     key_cb = key + "_cb"
+  #     key_ce = key + "_ce"
+  #     val = results_dict[key]
+  #     val_cb = results_dict[key_cb]
+  #     val_ce = results_dict[key_ce]
+  #     log_str += "%s: %.4f with confidence interval (%.4f, %.4f)\n" % (key, val, val_cb, val_ce)
   tf.logging.info(log_str) # log to screen
-  results_file = os.path.join(dir_to_write, "ROUGE_results.txt")
-  tf.logging.info("Writing final ROUGE results to %s...", results_file)
+  results_file = os.path.join(dir_to_write, "F1_results.txt")
+  tf.logging.info("Writing final F1_SCORE results to %s...", results_file)
   with open(results_file, "w") as f:
     f.write(log_str)
 
