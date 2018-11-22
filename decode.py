@@ -90,7 +90,7 @@ class BeamSearchDecoder(object):
 
       original_article = batch.original_articles[0]  # string
       original_abstract = batch.original_abstracts[0]  # string
-      original_abstract_sents = batch.original_abstracts_sents[0]  # list of strings
+      original_abstract_sents = batch.original_abstracts_sents_all[0]  # list of strings
 
       article_withunks = data.show_art_oovs(original_article, self._vocab) # string
       abstract_withunks = data.show_abs_oovs(original_abstract, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None)) # string
@@ -102,7 +102,7 @@ class BeamSearchDecoder(object):
       i = 0;
       decoded_words = []
       for hyp in all_hyp:
-        if(i < 5):
+        if(i < len(original_abstract_sents)):
           i = i + 1
         # Extract the output ids from the hypothesis and convert back to words
         output_ids = [int(t) for t in hyp.tokens[1:]]

@@ -28,7 +28,7 @@ import data
 class Example(object):
   """Class representing a train/val/test example for text summarization."""
 
-  def __init__(self, article, abstract_sentences, vocab, hps):
+  def __init__(self, article, abstract_sentences, abstract_sentences_all, vocab, hps):
     """Initializes the Example, performing tokenization and truncation to produce the encoder, decoder and target sequences, which are stored in self.
 
     Args:
@@ -74,6 +74,7 @@ class Example(object):
     self.original_article = article
     self.original_abstract = abstract
     self.original_abstract_sents = abstract_sentences
+    self.original_abstract_sents_all = abstract_sentences_all
 
 
   def get_dec_inp_targ_seqs(self, sequence, max_len, start_id, stop_id):
@@ -212,6 +213,7 @@ class Batch(object):
     self.original_articles = [ex.original_article for ex in example_list] # list of lists
     self.original_abstracts = [ex.original_abstract for ex in example_list] # list of lists
     self.original_abstracts_sents = [ex.original_abstract_sents for ex in example_list] # list of list of lists
+    self.original_abstracts_sents_all = [ex.original_abstract_sents_all for ex in example_list] # list of list of lists
 
 
 class Batcher(object):
@@ -235,7 +237,7 @@ class Batcher(object):
 
     # Initialize a queue of Batches waiting to be used, and a queue of Examples waiting to be batched
     self._batch_queue = Queue.Queue(self.BATCH_QUEUE_MAX)
-    self._example_queue = Queue.Queue(self.BATCH_QUEUE_MAX * self._hps.batch_size * 5)
+    self._example_queue = Queue.Queue(self.BATCH_QUEUE_MAX * self._hps.batch_size * hps.max_keyphrase_num)
 
     # Different settings depending on whether we're in single_pass mode or not
     if single_pass:
@@ -303,9 +305,11 @@ class Batcher(object):
           raise Exception("single_pass mode is off but the example generator is out of data; error.")
 
       # if self._hps.mode in ['train', 'eval']:
-      for sent in data.abstract2sents(abstract): # Use the <s> and </s> tags in abstract to get a list of sentences.
+      abstract_sentences_all = data.abstract2sents(abstract); # Use the <s> and </s> tags in abstract to get a list of sentences.
+      for i in range(self._hps.max_keyphrase_num):
+        sent = abstract_sentences_all[i % len(abstract_sentences_all)]
         abstract_sentences = [sent.strip()]
-        example = Example(article, abstract_sentences, self._vocab, self._hps) # Process into an Example.
+        example = Example(article, abstract_sentences, abstract_sentences_all, self._vocab, self._hps) # Process into an Example.
         self._example_queue.put(example) # place the Example in the example queue.
 
       # if self._hps.mode == "decode":
