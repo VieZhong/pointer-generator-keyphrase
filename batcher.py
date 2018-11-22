@@ -306,7 +306,7 @@ class Batcher(object):
       # example = Example(article, abstract_sentences, self._vocab, self._hps) # Process into an Example.
       # self._example_queue.put(example) # place the Example in the example queue.
 
-      for sent in data.abstract2sents(abstract) # Use the <s> and </s> tags in abstract to get a list of sentences.
+      for sent in data.abstract2sents(abstract): # Use the <s> and </s> tags in abstract to get a list of sentences.
         abstract_sentences = [sent.strip()]
         example = Example(article, abstract_sentences, self._vocab, self._hps) # Process into an Example.
         self._example_queue.put(example) # place the Example in the example queue.
