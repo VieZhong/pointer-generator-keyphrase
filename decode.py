@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""This file contains code to run beam search decoding, including running ROUGE evaluation and producing JSON datafiles for the in-browser attention visualizer, which can be found here https://github.com/abisee/attn_vis"""
+"""This file contains code to run beam search decoding, including running F1-SCORE evaluation and producing JSON datafiles for the in-browser attention visualizer, which can be found here https://github.com/abisee/attn_vis"""
 
 import os
 import time
@@ -85,7 +85,7 @@ class BeamSearchDecoder(object):
       if batch is None: # finished decoding dataset in single_pass mode
         assert FLAGS.single_pass, "Dataset exhausted, but we are not in single_pass mode"
         tf.logging.info("Decoder has finished reading dataset for single_pass.")
-        tf.logging.info("Output has been saved in %s and %s. Now starting ROUGE eval...", self._rouge_ref_dir, self._rouge_dec_dir)
+        tf.logging.info("Output has been saved in %s and %s. Now starting F1_SCORE eval...", self._rouge_ref_dir, self._rouge_dec_dir)
         f1_score = f1_score_eval(self._rouge_ref_dir, self._rouge_dec_dir)
         f1_score_log(f1_score, self._decode_dir)
         return
@@ -271,7 +271,7 @@ def get_f1_score(ref_words, dec_words, stemmer):
       num_overlap = num_overlap + 1
   if num_overlap < 1:
     return 0
-  recall = num_overlap / total_ref
+  recall = num_overlap / len(ref_stem_words)
   precision = num_overlap / total_dec
   return 2.0 * precision * recall / (precision + recall)
 
