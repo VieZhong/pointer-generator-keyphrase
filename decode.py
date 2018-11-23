@@ -263,12 +263,14 @@ def get_f1_score(ref_words, dec_words, stemmer):
   for d_words in dec_stem_words:
     d_words = d_words.split()
     is_overlap = False
-    for d_w in d_words:
-      for r_words in ref_stem_words:
-        if d_w in r_words:
-          is_overlap = True
+    for r_words in ref_stem_words:
+      is_in = True
+      for d_w in d_words:
+        if d_w not in r_words:
+          is_in = False
           break
-      if is_overlap:
+      if is_in:
+        is_overlap = True
         break
     if is_overlap:
       num_overlap = num_overlap + 1
@@ -320,7 +322,7 @@ def get_decode_dir_name(ckpt_name):
   elif "val" in FLAGS.data_path: dataset = "val"
   elif "test" in FLAGS.data_path: dataset = "test"
   else: raise ValueError("FLAGS.data_path %s should contain one of train, val or test" % (FLAGS.data_path))
-  dirname = "decode_%s_%imaxenc_%ibeam_%imindec_%imaxdec" % (dataset, FLAGS.max_enc_steps, FLAGS.beam_size, FLAGS.min_dec_steps, FLAGS.max_dec_steps)
+  dirname = "decode_%s_%imaxenc_%ibeam_%imindec_%imaxdec_%imaxnum" % (dataset, FLAGS.max_enc_steps, FLAGS.beam_size, FLAGS.min_dec_steps, FLAGS.max_dec_steps, FLAGS.max_keyphrase_num)
   if ckpt_name is not None:
     dirname += "_%s" % ckpt_name
   return dirname
