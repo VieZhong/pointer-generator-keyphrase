@@ -265,7 +265,7 @@ def get_f1_score(ref_words, dec_words, stemmer):
     is_overlap = False
     for d_w in d_words:
       for r_words in ref_stem_words:
-        if w in r_words:
+        if d_w in r_words:
           is_overlap = True
           break
       if is_overlap:
