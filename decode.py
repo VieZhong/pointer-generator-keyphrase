@@ -111,16 +111,16 @@ class BeamSearchDecoder(object):
       for hyp in all_hyp:
         if i < len(original_abstract_sents):
           i = i + 1
-        # Extract the output ids from the hypothesis and convert back to words
-        output_ids = [int(t) for t in hyp.tokens[1:]]
-        decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
+          # Extract the output ids from the hypothesis and convert back to words
+          output_ids = [int(t) for t in hyp.tokens[1:]]
+          decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
 
-        # Remove the [STOP] token from decoded_words, if necessary
-        try:
-          fst_stop_idx = decoded_words_1.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
-          decoded_words.append(decoded_words_1[:fst_stop_idx])
-        except ValueError:
-          decoded_words.append(decoded_words_1)
+          # Remove the [STOP] token from decoded_words, if necessary
+          try:
+            fst_stop_idx = decoded_words_1.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
+            decoded_words.append(decoded_words_1[:fst_stop_idx])
+          except ValueError:
+            decoded_words.append(decoded_words_1)
       decoded_output = ' '.join(flat(decoded_words)) # single string          
 
       # # Extract the output ids from the hypothesis and convert back to words
@@ -259,9 +259,15 @@ def get_f1_score(ref_words, dec_words, stemmer):
 
   num_overlap = 0
   dec_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in dec_words]
-  ref_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in ref_words]
-  for w in dec_stem_words:
-    if w in ref_stem_words:
+  ref_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in ref_words[:FLAGS.max_keyphrase_num]]
+  for words in dec_stem_words:
+    words = words.split()
+    is_overlap = False
+    for w in words:
+      if w in ref_stem_words:
+        is_overlap = True
+        break
+    if is_overlap:
       num_overlap = num_overlap + 1
   if num_overlap < 1:
     return 0
