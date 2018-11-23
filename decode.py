@@ -110,7 +110,7 @@ class BeamSearchDecoder(object):
       i = 0;
       decoded_words = []
       for hyp in all_hyp:
-        if(i < len(original_abstract_sents)):
+        if i < len(original_abstract_sents):
           i = i + 1
         # Extract the output ids from the hypothesis and convert back to words
         output_ids = [int(t) for t in hyp.tokens[1:]]
@@ -119,10 +119,10 @@ class BeamSearchDecoder(object):
         # Remove the [STOP] token from decoded_words, if necessary
         try:
           fst_stop_idx = decoded_words_1.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
-          decoded_words.extend(decoded_words_1[:fst_stop_idx])
+          decoded_words.append(decoded_words_1[:fst_stop_idx])
         except ValueError:
-          decoded_words.extend(decoded_words_1)
-      decoded_output = ' '.join(decoded_words) # single string          
+          decoded_words.append(decoded_words_1)
+      decoded_output = ' '.join(flat(decoded_words)) # single string          
 
       # # Extract the output ids from the hypothesis and convert back to words
       # output_ids = [int(t) for t in best_hyp.tokens[1:]]
@@ -137,7 +137,7 @@ class BeamSearchDecoder(object):
       # decoded_output = ' '.join(decoded_words) # single string
 
       if FLAGS.single_pass:
-        self.write_for_rouge(original_abstract_sents, decoded_words, counter) # write ref summary and decoded summary to file, to eval with pyrouge later
+        self.write_for_f1_eval(original_abstract_sents, decoded_words, counter) # write ref summary and decoded summary to file, to eval with pyrouge later
         counter += 1 # this is how many examples we've decoded
       else:
         print_results(article_withunks, abstract_withunks, decoded_output) # log output to screen
@@ -151,7 +151,7 @@ class BeamSearchDecoder(object):
           t0 = time.time()
 
 
-  def write_for_rouge(self, reference_sents, decoded_words, ex_index):
+  def write_for_f1_eval(self, reference_sents, decoded_words_list, ex_index):
     """Write output to file in correct format for eval with pyrouge. This is called in single_pass mode.
 
     Args:
@@ -161,14 +161,15 @@ class BeamSearchDecoder(object):
     """
     # First, divide decoded output into sentences
     decoded_sents = []
-    while len(decoded_words) > 0:
-      try:
-        fst_period_idx = decoded_words.index(".")
-      except ValueError: # there is text remaining that doesn't end in "."
-        fst_period_idx = len(decoded_words)
-      sent = decoded_words[:fst_period_idx+1] # sentence up to and including the period
-      decoded_words = decoded_words[fst_period_idx+1:] # everything else
-      decoded_sents.append(' '.join(sent))
+    for decoded_words in decoded_words_list:
+      while len(decoded_words) > 0:
+        try:
+          fst_period_idx = decoded_words.index(".")
+        except ValueError: # there is text remaining that doesn't end in "."
+          fst_period_idx = len(decoded_words)
+        sent = decoded_words[:fst_period_idx+1] # sentence up to and including the period
+        decoded_words = decoded_words[fst_period_idx+1:] # everything else
+        decoded_sents.append(' '.join(sent))
 
     # pyrouge calls a perl script that puts the data into HTML files.
     # Therefore we need to make our output HTML safe.
@@ -201,7 +202,7 @@ class BeamSearchDecoder(object):
       p_gens: List of scalars; the p_gen values. If not running in pointer-generator mode, list of None.
     """
     article_lst = article.split() # list of words
-    decoded_lst = decoded_words # list of decoded words
+    decoded_lst = flat(decoded_words) # list of decoded words
     to_write = {
         'article_lst': [make_html_safe(t) for t in article_lst],
         'decoded_lst': [make_html_safe(t) for t in decoded_lst],
@@ -214,6 +215,14 @@ class BeamSearchDecoder(object):
     with open(output_fname, 'w') as output_file:
       json.dump(to_write, output_file)
     tf.logging.info('Wrote visualization data to %s', output_fname)
+
+
+def flat(l):
+  for k in l:
+    if not isinstance(k, (list, tuple)):
+      yield k
+    else:
+      yield from flat(k)
 
 
 def print_results(article, abstract, decoded_output):
@@ -233,11 +242,11 @@ def make_html_safe(s):
 
 
 def read_text_file(text_file):
-  words = []
+  lines = []
   with open(text_file, "r", encoding='utf-8') as f:
     for line in f:
-      words.extend(line.strip().split())
-  return words
+      lines.append(line.strip())
+  return lines
 
 
 def get_f1_score(ref_words, dec_words, stemmer):
@@ -248,8 +257,8 @@ def get_f1_score(ref_words, dec_words, stemmer):
     return 0
 
   num_overlap = 0
-  dec_stem_words = stemmer.stemWords(dec_words)
-  ref_stem_words = stemmer.stemWords(ref_words)
+  dec_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in dec_words]
+  ref_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in ref_words]
   for w in dec_stem_words:
     if w in ref_stem_words:
       num_overlap = num_overlap + 1
