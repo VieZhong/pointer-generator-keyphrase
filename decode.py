@@ -26,6 +26,8 @@ import pyrouge
 import util
 import logging
 import numpy as np
+import Stemmer
+import hashlib
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -78,6 +80,7 @@ class BeamSearchDecoder(object):
     """Decode examples until data is exhausted (if FLAGS.single_pass) and return, or decode indefinitely, loading latest checkpoint at regular intervals"""
     t0 = time.time()
     counter = 0
+    hashList = []
     while True:
       batch = self._batcher.next_batch()  # 1 example repeated across batch
       if batch is None: # finished decoding dataset in single_pass mode
@@ -91,6 +94,11 @@ class BeamSearchDecoder(object):
       original_article = batch.original_articles[0]  # string
       original_abstract = batch.original_abstracts[0]  # string
       original_abstract_sents = batch.original_abstracts_sents_all[0]  # list of strings
+
+      art_hash = hashhex(original_article)
+      if art_hash in hashList:
+        continue
+      hashList.append(art_hash)
 
       article_withunks = data.show_art_oovs(original_article, self._vocab) # string
       abstract_withunks = data.show_abs_oovs(original_abstract, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None)) # string
@@ -141,6 +149,7 @@ class BeamSearchDecoder(object):
           tf.logging.info('We\'ve been decoding with same checkpoint for %i seconds. Time to load new checkpoint', t1-t0)
           _ = util.load_ckpt(self._saver, self._sess)
           t0 = time.time()
+
 
   def write_for_rouge(self, reference_sents, decoded_words, ex_index):
     """Write output to file in correct format for eval with pyrouge. This is called in single_pass mode.
@@ -231,14 +240,20 @@ def read_text_file(text_file):
   return words
 
 
-def get_f1_score(ref_words, dec_words):
+def get_f1_score(ref_words, dec_words, stemmer):
   total_ref = len(ref_words)
   total_dec = len(dec_words)
+  
+  if total_ref < 1 or total_dec < 1:
+    return 0
+
   num_overlap = 0
-  for w in dec_words:
-    if w in ref_words:
+  dec_stem_words = stemmer.stemWords(dec_words)
+  ref_stem_words = stemmer.stemWords(ref_words)
+  for w in dec_stem_words:
+    if w in ref_stem_words:
       num_overlap = num_overlap + 1
-  if num_overlap < 1 or total_ref < 1 or total_dec < 1:
+  if num_overlap < 1:
     return 0
   recall = num_overlap / total_ref
   precision = num_overlap / total_dec
@@ -250,6 +265,8 @@ def f1_score_eval(ref_dir, dec_dir):
   ref_files = os.listdir(ref_dir)
   dec_files = os.listdir(dec_dir)
 
+  stemmer = Stemmer.Stemmer('english')
+
   f1_score_result = []
   for ref_file in ref_files:
     name = ref_file.split('_')[0]
@@ -257,7 +274,7 @@ def f1_score_eval(ref_dir, dec_dir):
     if dec_file in dec_files:
       ref_words = read_text_file(os.path.join(ref_dir, ref_file))
       dec_words = read_text_file(os.path.join(dec_dir, dec_file))
-      f1_score_result.append(get_f1_score(ref_words, dec_words))
+      f1_score_result.append(get_f1_score(ref_words, dec_words, stemmer))
   if len(f1_score_result) < 1:
     return 0.0
   return sum(f1_score_result) / len(f1_score_result)
@@ -298,6 +315,7 @@ def f1_score_log(result, dir_to_write):
   with open(results_file, "w") as f:
     f.write(log_str)
 
+
 def get_decode_dir_name(ckpt_name):
   """Make a descriptive name for the decode dir, including the name of the checkpoint we use to decode. This is called in single_pass mode."""
 
@@ -309,3 +327,10 @@ def get_decode_dir_name(ckpt_name):
   if ckpt_name is not None:
     dirname += "_%s" % ckpt_name
   return dirname
+
+
+def hashhex(s):
+  """Returns a heximal formated SHA1 hash of the input string."""
+  h = hashlib.sha1()
+  h.update(s.encode('utf-8'))
+  return h.hexdigest()
