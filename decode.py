@@ -22,10 +22,11 @@ import tensorflow as tf
 import beam_search
 import data
 import json
-import pyrouge
 import util
 import logging
 import numpy as np
+import Stemmer
+import hashlib
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -78,40 +79,64 @@ class BeamSearchDecoder(object):
     """Decode examples until data is exhausted (if FLAGS.single_pass) and return, or decode indefinitely, loading latest checkpoint at regular intervals"""
     t0 = time.time()
     counter = 0
+    hashList = []
     while True:
       batch = self._batcher.next_batch()  # 1 example repeated across batch
       if batch is None: # finished decoding dataset in single_pass mode
         assert FLAGS.single_pass, "Dataset exhausted, but we are not in single_pass mode"
         tf.logging.info("Decoder has finished reading dataset for single_pass.")
         tf.logging.info("Output has been saved in %s and %s. Now starting ROUGE eval...", self._rouge_ref_dir, self._rouge_dec_dir)
-        results_dict = rouge_eval(self._rouge_ref_dir, self._rouge_dec_dir)
-        rouge_log(results_dict, self._decode_dir)
+        f1_score = f1_score_eval(self._rouge_ref_dir, self._rouge_dec_dir)
+        f1_score_log(f1_score, self._decode_dir)
         return
 
       original_article = batch.original_articles[0]  # string
       original_abstract = batch.original_abstracts[0]  # string
-      original_abstract_sents = batch.original_abstracts_sents[0]  # list of strings
+      original_abstract_sents = batch.original_abstracts_sents_all[0]  # list of strings
+
+      art_hash = hashhex(original_article)
+      if art_hash in hashList:
+        continue
+      hashList.append(art_hash)
 
       article_withunks = data.show_art_oovs(original_article, self._vocab) # string
       abstract_withunks = data.show_abs_oovs(original_abstract, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None)) # string
 
       # Run beam search to get best Hypothesis
-      best_hyp = beam_search.run_beam_search(self._sess, self._model, self._vocab, batch)
+      all_hyp = beam_search.run_beam_search(self._sess, self._model, self._vocab, batch)
+      best_hyp = all_hyp[0]
 
-      # Extract the output ids from the hypothesis and convert back to words
-      output_ids = [int(t) for t in best_hyp.tokens[1:]]
-      decoded_words = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
+      i = 0;
+      decoded_words = []
+      for hyp in all_hyp:
+        if i < len(original_abstract_sents):
+          i = i + 1
+        # Extract the output ids from the hypothesis and convert back to words
+        output_ids = [int(t) for t in hyp.tokens[1:]]
+        decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
 
-      # Remove the [STOP] token from decoded_words, if necessary
-      try:
-        fst_stop_idx = decoded_words.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
-        decoded_words = decoded_words[:fst_stop_idx]
-      except ValueError:
-        decoded_words = decoded_words
-      decoded_output = ' '.join(decoded_words) # single string
+        # Remove the [STOP] token from decoded_words, if necessary
+        try:
+          fst_stop_idx = decoded_words_1.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
+          decoded_words.append(decoded_words_1[:fst_stop_idx])
+        except ValueError:
+          decoded_words.append(decoded_words_1)
+      decoded_output = ' '.join(flat(decoded_words)) # single string          
+
+      # # Extract the output ids from the hypothesis and convert back to words
+      # output_ids = [int(t) for t in best_hyp.tokens[1:]]
+      # decoded_words = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
+
+      # # Remove the [STOP] token from decoded_words, if necessary
+      # try:
+      #   fst_stop_idx = decoded_words.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
+      #   decoded_words = decoded_words[:fst_stop_idx]
+      # except ValueError:
+      #   decoded_words = decoded_words
+      # decoded_output = ' '.join(decoded_words) # single string
 
       if FLAGS.single_pass:
-        self.write_for_rouge(original_abstract_sents, decoded_words, counter) # write ref summary and decoded summary to file, to eval with pyrouge later
+        self.write_for_f1_eval(original_abstract_sents, decoded_words, counter) # write ref summary and decoded summary to file, to eval with pyrouge later
         counter += 1 # this is how many examples we've decoded
       else:
         print_results(article_withunks, abstract_withunks, decoded_output) # log output to screen
@@ -124,7 +149,8 @@ class BeamSearchDecoder(object):
           _ = util.load_ckpt(self._saver, self._sess)
           t0 = time.time()
 
-  def write_for_rouge(self, reference_sents, decoded_words, ex_index):
+
+  def write_for_f1_eval(self, reference_sents, decoded_words_list, ex_index):
     """Write output to file in correct format for eval with pyrouge. This is called in single_pass mode.
 
     Args:
@@ -134,14 +160,15 @@ class BeamSearchDecoder(object):
     """
     # First, divide decoded output into sentences
     decoded_sents = []
-    while len(decoded_words) > 0:
-      try:
-        fst_period_idx = decoded_words.index(".")
-      except ValueError: # there is text remaining that doesn't end in "."
-        fst_period_idx = len(decoded_words)
-      sent = decoded_words[:fst_period_idx+1] # sentence up to and including the period
-      decoded_words = decoded_words[fst_period_idx+1:] # everything else
-      decoded_sents.append(' '.join(sent))
+    for decoded_words in decoded_words_list:
+      while len(decoded_words) > 0:
+        try:
+          fst_period_idx = decoded_words.index(".")
+        except ValueError: # there is text remaining that doesn't end in "."
+          fst_period_idx = len(decoded_words)
+        sent = decoded_words[:fst_period_idx+1] # sentence up to and including the period
+        decoded_words = decoded_words[fst_period_idx+1:] # everything else
+        decoded_sents.append(' '.join(sent))
 
     # pyrouge calls a perl script that puts the data into HTML files.
     # Therefore we need to make our output HTML safe.
@@ -174,7 +201,7 @@ class BeamSearchDecoder(object):
       p_gens: List of scalars; the p_gen values. If not running in pointer-generator mode, list of None.
     """
     article_lst = article.split() # list of words
-    decoded_lst = decoded_words # list of decoded words
+    decoded_lst = flat(decoded_words) # list of decoded words
     to_write = {
         'article_lst': [make_html_safe(t) for t in article_lst],
         'decoded_lst': [make_html_safe(t) for t in decoded_lst],
@@ -187,6 +214,14 @@ class BeamSearchDecoder(object):
     with open(output_fname, 'w') as output_file:
       json.dump(to_write, output_file)
     tf.logging.info('Wrote visualization data to %s', output_fname)
+
+
+def flat(l):
+  for k in l:
+    if not isinstance(k, (list, tuple)):
+      yield k
+    else:
+      yield from flat(k)
 
 
 def print_results(article, abstract, decoded_output):
@@ -205,40 +240,69 @@ def make_html_safe(s):
   return s
 
 
-def rouge_eval(ref_dir, dec_dir):
-  """Evaluate the files in ref_dir and dec_dir with pyrouge, returning results_dict"""
-  r = pyrouge.Rouge155()
-  r.model_filename_pattern = '#ID#_reference.txt'
-  r.system_filename_pattern = '(\d+)_decoded.txt'
-  r.model_dir = ref_dir
-  r.system_dir = dec_dir
-  logging.getLogger('global').setLevel(logging.WARNING) # silence pyrouge logging
-  rouge_results = r.convert_and_evaluate()
-  return r.output_to_dict(rouge_results)
+def read_text_file(text_file):
+  lines = []
+  with open(text_file, "r", encoding='utf-8') as f:
+    for line in f:
+      line = line.strip()
+      if line:
+        lines.append(line)
+  return lines
 
 
-def rouge_log(results_dict, dir_to_write):
+def get_f1_score(ref_words, dec_words, stemmer):
+  total_ref = len(ref_words)
+  total_dec = len(dec_words)
+  
+  if total_ref < 1 or total_dec < 1:
+    return 0
+
+  num_overlap = 0
+  dec_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in dec_words]
+  ref_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in ref_words]
+  for w in dec_stem_words:
+    if w in ref_stem_words:
+      num_overlap = num_overlap + 1
+  if num_overlap < 1:
+    return 0
+  recall = num_overlap / total_ref
+  precision = num_overlap / total_dec
+  return 2.0 * precision * recall / (precision + recall)
+
+
+def f1_score_eval(ref_dir, dec_dir):
+  # "%06d_reference.txt", "%06d_decoded.txt"
+  ref_files = os.listdir(ref_dir)
+  dec_files = os.listdir(dec_dir)
+
+  stemmer = Stemmer.Stemmer('english')
+
+  f1_score_result = []
+  for ref_file in ref_files:
+    name = ref_file.split('_')[0]
+    dec_file = ("%s_decoded.txt" % name)
+    if dec_file in dec_files:
+      ref_words = read_text_file(os.path.join(ref_dir, ref_file))
+      dec_words = read_text_file(os.path.join(dec_dir, dec_file))
+      f1_score_result.append(get_f1_score(ref_words, dec_words, stemmer))
+  if len(f1_score_result) < 1:
+    return 0.0
+  return sum(f1_score_result) / len(f1_score_result)
+
+
+def f1_score_log(result, dir_to_write):
   """Log ROUGE results to screen and write to file.
 
   Args:
     results_dict: the dictionary returned by pyrouge
     dir_to_write: the directory where we will write the results to"""
-  log_str = ""
-  for x in ["1","2","l"]:
-    log_str += "\nROUGE-%s:\n" % x
-    for y in ["f_score", "recall", "precision"]:
-      key = "rouge_%s_%s" % (x,y)
-      key_cb = key + "_cb"
-      key_ce = key + "_ce"
-      val = results_dict[key]
-      val_cb = results_dict[key_cb]
-      val_ce = results_dict[key_ce]
-      log_str += "%s: %.4f with confidence interval (%.4f, %.4f)\n" % (key, val, val_cb, val_ce)
+  log_str = ("f1 score: %s" % result)
   tf.logging.info(log_str) # log to screen
-  results_file = os.path.join(dir_to_write, "ROUGE_results.txt")
-  tf.logging.info("Writing final ROUGE results to %s...", results_file)
+  results_file = os.path.join(dir_to_write, "F1_results.txt")
+  tf.logging.info("Writing final F1_SCORE results to %s...", results_file)
   with open(results_file, "w") as f:
     f.write(log_str)
+
 
 def get_decode_dir_name(ckpt_name):
   """Make a descriptive name for the decode dir, including the name of the checkpoint we use to decode. This is called in single_pass mode."""
@@ -251,3 +315,10 @@ def get_decode_dir_name(ckpt_name):
   if ckpt_name is not None:
     dirname += "_%s" % ckpt_name
   return dirname
+
+
+def hashhex(s):
+  """Returns a heximal formated SHA1 hash of the input string."""
+  h = hashlib.sha1()
+  h.update(s.encode('utf-8'))
+  return h.hexdigest()

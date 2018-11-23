@@ -159,7 +159,7 @@ def run_beam_search(sess, model, vocab, batch):
   hyps_sorted = sort_hyps(results)
 
   # Return the hypothesis with highest average log prob
-  return hyps_sorted[0]
+  return hyps_sorted
 
 def sort_hyps(hyps):
   """Return a list of Hypothesis objects, sorted by descending average log probability"""
