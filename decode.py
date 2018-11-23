@@ -22,7 +22,6 @@ import tensorflow as tf
 import beam_search
 import data
 import json
-import pyrouge
 import util
 import logging
 import numpy as np
@@ -245,7 +244,9 @@ def read_text_file(text_file):
   lines = []
   with open(text_file, "r", encoding='utf-8') as f:
     for line in f:
-      lines.append(line.strip())
+      line = line.strip()
+      if line:
+        lines.append(line)
   return lines
 
 
@@ -289,18 +290,6 @@ def f1_score_eval(ref_dir, dec_dir):
   return sum(f1_score_result) / len(f1_score_result)
 
 
-# def rouge_eval(ref_dir, dec_dir):
-#   """Evaluate the files in ref_dir and dec_dir with pyrouge, returning results_dict"""
-#   r = pyrouge.Rouge155()
-#   r.model_filename_pattern = '#ID#_reference.txt'
-#   r.system_filename_pattern = '(\d+)_decoded.txt'
-#   r.model_dir = ref_dir
-#   r.system_dir = dec_dir
-#   logging.getLogger('global').setLevel(logging.WARNING) # silence pyrouge logging
-#   rouge_results = r.convert_and_evaluate()
-#   return r.output_to_dict(rouge_results)
-
-
 def f1_score_log(result, dir_to_write):
   """Log ROUGE results to screen and write to file.
 
@@ -308,16 +297,6 @@ def f1_score_log(result, dir_to_write):
     results_dict: the dictionary returned by pyrouge
     dir_to_write: the directory where we will write the results to"""
   log_str = ("f1 score: %s" % result)
-  # for x in ["1","2","l"]:
-  #   log_str += "\nROUGE-%s:\n" % x
-  #   for y in ["f_score", "recall", "precision"]:
-  #     key = "rouge_%s_%s" % (x,y)
-  #     key_cb = key + "_cb"
-  #     key_ce = key + "_ce"
-  #     val = results_dict[key]
-  #     val_cb = results_dict[key_cb]
-  #     val_ce = results_dict[key_ce]
-  #     log_str += "%s: %.4f with confidence interval (%.4f, %.4f)\n" % (key, val, val_cb, val_ce)
   tf.logging.info(log_str) # log to screen
   results_file = os.path.join(dir_to_write, "F1_results.txt")
   tf.logging.info("Writing final F1_SCORE results to %s...", results_file)
