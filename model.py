@@ -404,7 +404,7 @@ class SummarizationModel(object):
     beam_size = len(dec_init_states)
 
     if hps.cell_type == "GRU":
-      new_dec_in_state = dec_init_states
+      new_dec_in_state = np.array(dec_init_states)
     else:
       # Turn dec_init_states (a list of LSTMStateTuples) into a single LSTMStateTuple for the batch
       cells = [np.expand_dims(state.c, axis=0) for state in dec_init_states]
