@@ -314,7 +314,7 @@ class SummarizationModel(object):
     tf.summary.scalar('global_norm', global_norm)
 
     # Apply adagrad optimizer
-    if optimizer == 'Adam':
+    if self._hps.optimizer == 'Adam':
       optimizer = tf.train.AdamOptimizer(self._hps.lr)
     else:
       optimizer = tf.train.AdagradOptimizer(self._hps.lr, initial_accumulator_value=self._hps.adagrad_init_acc)
