@@ -140,7 +140,7 @@ class SummarizationModel(object):
       coverage: A tensor, the current coverage vector
     """
     hps = self._hps
-    if _hps.cell_type == 'GRU':
+    if hps.cell_type == 'GRU':
       cell = tf.contrib.rnn.GRUCell(hps.hidden_dim, kernel_initializer=self.rand_unif_init)
     else:
       cell = tf.contrib.rnn.LSTMCell(hps.hidden_dim, state_is_tuple=True, initializer=self.rand_unif_init)
