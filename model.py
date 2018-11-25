@@ -90,13 +90,15 @@ class SummarizationModel(object):
       if self._hps.cell_type == 'GRU':
         cell_fw = tf.contrib.rnn.GRUCell(self._hps.hidden_dim, kernel_initializer=self.rand_unif_init)
         cell_bw = tf.contrib.rnn.GRUCell(self._hps.hidden_dim, kernel_initializer=self.rand_unif_init)
+        (encoder_outputs, encoder_states) = tf.nn.bidirectional_dynamic_rnn(cell_fw, cell_bw, encoder_inputs, dtype=tf.float32, sequence_length=seq_len, swap_memory=True)
+        encoder_outputs = tf.concat(axis=2, values=encoder_outputs)
+        return encoder_outputs, encoder_states
       else:
         cell_fw = tf.contrib.rnn.LSTMCell(self._hps.hidden_dim, initializer=self.rand_unif_init, state_is_tuple=True)
         cell_bw = tf.contrib.rnn.LSTMCell(self._hps.hidden_dim, initializer=self.rand_unif_init, state_is_tuple=True)
-      (encoder_outputs, (fw_st, bw_st)) = tf.nn.bidirectional_dynamic_rnn(cell_fw, cell_bw, encoder_inputs, dtype=tf.float32, sequence_length=seq_len, swap_memory=True)
-      encoder_outputs = tf.concat(axis=2, values=encoder_outputs) # concatenate the forwards and backwards states
-    return encoder_outputs, fw_st, bw_st
-
+        (encoder_outputs, (fw_st, bw_st)) = tf.nn.bidirectional_dynamic_rnn(cell_fw, cell_bw, encoder_inputs, dtype=tf.float32, sequence_length=seq_len, swap_memory=True)
+        encoder_outputs = tf.concat(axis=2, values=encoder_outputs) # concatenate the forwards and backwards states
+        return encoder_outputs, fw_st, bw_st
 
   def _reduce_states(self, fw_st, bw_st):
     """Add to the graph a linear layer to reduce the encoder's final FW and BW state into a single initial state for the decoder. This is needed because the encoder is bidirectional but the decoder is not.
@@ -124,7 +126,6 @@ class SummarizationModel(object):
       new_h = tf.nn.relu(tf.matmul(old_h, w_reduce_h) + bias_reduce_h) # Get new state from old state
       return tf.contrib.rnn.LSTMStateTuple(new_c, new_h) # Return new cell and state
 
-
   def _add_decoder(self, inputs):
     """Add attention decoder to the graph. In train or eval mode, you call this once to get output on ALL steps. In decode (beam search) mode, you call this once for EACH decoder step.
 
@@ -140,7 +141,7 @@ class SummarizationModel(object):
     """
     hps = self._hps
     if _hps.cell_type == 'GRU':
-      cell = tf.contrib.rnn.LSTMCell(hps.hidden_dim, kernel_initializer=self.rand_unif_init)
+      cell = tf.contrib.rnn.GRUCell(hps.hidden_dim, kernel_initializer=self.rand_unif_init)
     else:
       cell = tf.contrib.rnn.LSTMCell(hps.hidden_dim, state_is_tuple=True, initializer=self.rand_unif_init)
 
@@ -220,12 +221,16 @@ class SummarizationModel(object):
         emb_enc_inputs = tf.nn.embedding_lookup(embedding, self._enc_batch) # tensor with shape (batch_size, max_enc_steps, emb_size)
         emb_dec_inputs = [tf.nn.embedding_lookup(embedding, x) for x in tf.unstack(self._dec_batch, axis=1)] # list length max_dec_steps containing shape (batch_size, emb_size)
 
+      if hps.cell_type == 'GRU':
+        enc_outputs, enc_states = self._add_encoder(emb_enc_inputs, self._enc_lens)
+        self._enc_states = enc_outputs
+        self._dec_in_state = enc_states
+      else:
       # Add the encoder.
-      enc_outputs, fw_st, bw_st = self._add_encoder(emb_enc_inputs, self._enc_lens)
-      self._enc_states = enc_outputs
-
+        enc_outputs, fw_st, bw_st = self._add_encoder(emb_enc_inputs, self._enc_lens)
+        self._enc_states = enc_outputs
       # Our encoder is bidirectional and our decoder is unidirectional so we need to reduce the final encoder hidden state to the right size to be the initial decoder hidden state
-      self._dec_in_state = self._reduce_states(fw_st, bw_st)
+        self._dec_in_state = self._reduce_states(fw_st, bw_st)
 
       # Add the decoder.
       with tf.variable_scope('decoder'):
@@ -367,7 +372,10 @@ class SummarizationModel(object):
 
     # dec_in_state is LSTMStateTuple shape ([batch_size,hidden_dim],[batch_size,hidden_dim])
     # Given that the batch is a single example repeated, dec_in_state is identical across the batch so we just take the top row.
-    dec_in_state = tf.contrib.rnn.LSTMStateTuple(dec_in_state.c[0], dec_in_state.h[0])
+    if self._hps.cell_type == "GRU":
+      dec_in_state = dec_in_state[0]
+    else:
+      dec_in_state = tf.contrib.rnn.LSTMStateTuple(dec_in_state.c[0], dec_in_state.h[0])
     return enc_states, dec_in_state
 
 
@@ -392,14 +400,18 @@ class SummarizationModel(object):
       new_coverage: Coverage vectors for this step. A list of arrays. List of None if coverage is not turned on.
     """
 
+    hps = self._hps
     beam_size = len(dec_init_states)
 
-    # Turn dec_init_states (a list of LSTMStateTuples) into a single LSTMStateTuple for the batch
-    cells = [np.expand_dims(state.c, axis=0) for state in dec_init_states]
-    hiddens = [np.expand_dims(state.h, axis=0) for state in dec_init_states]
-    new_c = np.concatenate(cells, axis=0)  # shape [batch_size,hidden_dim]
-    new_h = np.concatenate(hiddens, axis=0)  # shape [batch_size,hidden_dim]
-    new_dec_in_state = tf.contrib.rnn.LSTMStateTuple(new_c, new_h)
+    if hps.cell_type == "GRU":
+      new_dec_in_state = dec_init_states
+    else:
+      # Turn dec_init_states (a list of LSTMStateTuples) into a single LSTMStateTuple for the batch
+      cells = [np.expand_dims(state.c, axis=0) for state in dec_init_states]
+      hiddens = [np.expand_dims(state.h, axis=0) for state in dec_init_states]
+      new_c = np.concatenate(cells, axis=0)  # shape [batch_size,hidden_dim]
+      new_h = np.concatenate(hiddens, axis=0)  # shape [batch_size,hidden_dim]
+      new_dec_in_state = tf.contrib.rnn.LSTMStateTuple(new_c, new_h)
 
     feed = {
         self._enc_states: enc_states,
