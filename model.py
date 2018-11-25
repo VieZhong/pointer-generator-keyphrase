@@ -90,15 +90,13 @@ class SummarizationModel(object):
       if self._hps.cell_type == 'GRU':
         cell_fw = tf.contrib.rnn.GRUCell(self._hps.hidden_dim, kernel_initializer=self.rand_unif_init)
         cell_bw = tf.contrib.rnn.GRUCell(self._hps.hidden_dim, kernel_initializer=self.rand_unif_init)
-        (encoder_outputs, encoder_states) = tf.nn.bidirectional_dynamic_rnn(cell_fw, cell_bw, encoder_inputs, dtype=tf.float32, sequence_length=seq_len, swap_memory=True)
-        encoder_outputs = tf.concat(axis=2, values=encoder_outputs)
-        return encoder_outputs, encoder_states
       else:
         cell_fw = tf.contrib.rnn.LSTMCell(self._hps.hidden_dim, initializer=self.rand_unif_init, state_is_tuple=True)
         cell_bw = tf.contrib.rnn.LSTMCell(self._hps.hidden_dim, initializer=self.rand_unif_init, state_is_tuple=True)
-        (encoder_outputs, (fw_st, bw_st)) = tf.nn.bidirectional_dynamic_rnn(cell_fw, cell_bw, encoder_inputs, dtype=tf.float32, sequence_length=seq_len, swap_memory=True)
-        encoder_outputs = tf.concat(axis=2, values=encoder_outputs) # concatenate the forwards and backwards states
-        return encoder_outputs, fw_st, bw_st
+
+      (encoder_outputs, (fw_st, bw_st)) = tf.nn.bidirectional_dynamic_rnn(cell_fw, cell_bw, encoder_inputs, dtype=tf.float32, sequence_length=seq_len, swap_memory=True)
+      encoder_outputs = tf.concat(axis=2, values=encoder_outputs) # concatenate the forwards and backwards states
+      return encoder_outputs, fw_st, bw_st
 
   def _reduce_states(self, fw_st, bw_st):
     """Add to the graph a linear layer to reduce the encoder's final FW and BW state into a single initial state for the decoder. This is needed because the encoder is bidirectional but the decoder is not.
@@ -112,19 +110,24 @@ class SummarizationModel(object):
     """
     hidden_dim = self._hps.hidden_dim
     with tf.variable_scope('reduce_final_st'):
-
-      # Define weights and biases to reduce the cell and reduce the state
-      w_reduce_c = tf.get_variable('w_reduce_c', [hidden_dim * 2, hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
-      w_reduce_h = tf.get_variable('w_reduce_h', [hidden_dim * 2, hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
-      bias_reduce_c = tf.get_variable('bias_reduce_c', [hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
-      bias_reduce_h = tf.get_variable('bias_reduce_h', [hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
-
-      # Apply linear layer
-      old_c = tf.concat(axis=1, values=[fw_st.c, bw_st.c]) # Concatenation of fw and bw cell
-      old_h = tf.concat(axis=1, values=[fw_st.h, bw_st.h]) # Concatenation of fw and bw state
-      new_c = tf.nn.relu(tf.matmul(old_c, w_reduce_c) + bias_reduce_c) # Get new cell from old cell
-      new_h = tf.nn.relu(tf.matmul(old_h, w_reduce_h) + bias_reduce_h) # Get new state from old state
-      return tf.contrib.rnn.LSTMStateTuple(new_c, new_h) # Return new cell and state
+      if self._hps.cell_type == "GRU":
+        w_reduce_s = tf.get_variable('w_reduce_s', [hidden_dim * 2, hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
+        bias_reduce_s = tf.get_variable('bias_reduce_s', [hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
+        old_s = tf.concat(axis=1, values=[fw_st, bw_st])
+        new_s = tf.nn.relu(tf.matmul(old_s, w_reduce_s) + bias_reduce_s)
+        return new_s
+      else:
+        # Define weights and biases to reduce the cell and reduce the state
+        w_reduce_c = tf.get_variable('w_reduce_c', [hidden_dim * 2, hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
+        w_reduce_h = tf.get_variable('w_reduce_h', [hidden_dim * 2, hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
+        bias_reduce_c = tf.get_variable('bias_reduce_c', [hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
+        bias_reduce_h = tf.get_variable('bias_reduce_h', [hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
+        # Apply linear layer
+        old_c = tf.concat(axis=1, values=[fw_st.c, bw_st.c]) # Concatenation of fw and bw cell
+        old_h = tf.concat(axis=1, values=[fw_st.h, bw_st.h]) # Concatenation of fw and bw state
+        new_c = tf.nn.relu(tf.matmul(old_c, w_reduce_c) + bias_reduce_c) # Get new cell from old cell
+        new_h = tf.nn.relu(tf.matmul(old_h, w_reduce_h) + bias_reduce_h) # Get new state from old state
+        return tf.contrib.rnn.LSTMStateTuple(new_c, new_h) # Return new cell and state
 
   def _add_decoder(self, inputs):
     """Add attention decoder to the graph. In train or eval mode, you call this once to get output on ALL steps. In decode (beam search) mode, you call this once for EACH decoder step.
@@ -221,11 +224,6 @@ class SummarizationModel(object):
         emb_enc_inputs = tf.nn.embedding_lookup(embedding, self._enc_batch) # tensor with shape (batch_size, max_enc_steps, emb_size)
         emb_dec_inputs = [tf.nn.embedding_lookup(embedding, x) for x in tf.unstack(self._dec_batch, axis=1)] # list length max_dec_steps containing shape (batch_size, emb_size)
 
-      if hps.cell_type == 'GRU':
-        enc_outputs, enc_states = self._add_encoder(emb_enc_inputs, self._enc_lens)
-        self._enc_states = enc_outputs
-        self._dec_in_state = enc_states
-      else:
       # Add the encoder.
         enc_outputs, fw_st, bw_st = self._add_encoder(emb_enc_inputs, self._enc_lens)
         self._enc_states = enc_outputs
