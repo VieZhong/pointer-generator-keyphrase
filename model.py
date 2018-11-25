@@ -94,6 +94,9 @@ class SummarizationModel(object):
         cell_fw = tf.contrib.rnn.LSTMCell(self._hps.hidden_dim, initializer=self.rand_unif_init, state_is_tuple=True)
         cell_bw = tf.contrib.rnn.LSTMCell(self._hps.hidden_dim, initializer=self.rand_unif_init, state_is_tuple=True)
 
+        cell_fw = tf.contrib.rnn.DropoutWrapper(cell_fw, input_keep_prob=(1.0 - self._hps.dropout))
+        cell_bw = tf.contrib.rnn.DropoutWrapper(cell_bw, input_keep_prob=(1.0 - self._hps.dropout))
+
       (encoder_outputs, (fw_st, bw_st)) = tf.nn.bidirectional_dynamic_rnn(cell_fw, cell_bw, encoder_inputs, dtype=tf.float32, sequence_length=seq_len, swap_memory=True)
       encoder_outputs = tf.concat(axis=2, values=encoder_outputs) # concatenate the forwards and backwards states
       return encoder_outputs, fw_st, bw_st
@@ -147,6 +150,7 @@ class SummarizationModel(object):
       cell = tf.contrib.rnn.GRUCell(hps.hidden_dim, kernel_initializer=self.rand_unif_init)
     else:
       cell = tf.contrib.rnn.LSTMCell(hps.hidden_dim, state_is_tuple=True, initializer=self.rand_unif_init)
+    cell = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=(1.0 - hps.dropout))
 
     prev_coverage = self.prev_coverage if hps.mode=="decode" and hps.coverage else None # In decode mode, we run attention_decoder one step at a time and so need to pass in the previous step's coverage vector each time
 
@@ -310,7 +314,10 @@ class SummarizationModel(object):
     tf.summary.scalar('global_norm', global_norm)
 
     # Apply adagrad optimizer
-    optimizer = tf.train.AdagradOptimizer(self._hps.lr, initial_accumulator_value=self._hps.adagrad_init_acc)
+    if optimizer == 'Adam':
+      optimizer = tf.train.AdamOptimizer(self._hps.lr)
+    else:
+      optimizer = tf.train.AdagradOptimizer(self._hps.lr, initial_accumulator_value=self._hps.adagrad_init_acc)
     with tf.device("/gpu:0"):
       self._train_op = optimizer.apply_gradients(zip(grads, tvars), global_step=self.global_step, name='train_step')
 
