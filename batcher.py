@@ -28,7 +28,7 @@ import data
 class Example(object):
   """Class representing a train/val/test example for text summarization."""
 
-  def __init__(self, article, abstract_sentences, abstract_sentences_all, vocab, hps):
+  def __init__(self, article, abstract_sentences, abstract_sentences_all, vocab, hps, stop_words):
     """Initializes the Example, performing tokenization and truncation to produce the encoder, decoder and target sequences, which are stored in self.
 
     Args:
@@ -63,6 +63,7 @@ class Example(object):
     if hps.pointer_gen:
       # Store a version of the enc_input where in-article OOVs are represented by their temporary OOV id; also store the in-article OOVs words themselves
       self.enc_input_extend_vocab, self.article_oovs = data.article2ids(article_words, vocab)
+      self.cooccurrence_matrix = data.get_cooccurrence_matrix(self.enc_input_extend_vocab, exclude_words=stop_words)
 
       # Get a verison of the reference summary where in-article OOVs are represented by their temporary article OOV id
       abs_ids_extend_vocab = data.abstract2ids(abstract_words, vocab, self.article_oovs)
@@ -179,8 +180,11 @@ class Batch(object):
       self.art_oovs = [ex.article_oovs for ex in example_list]
       # Store the version of the enc_batch that uses the article OOV ids
       self.enc_batch_extend_vocab = np.zeros((hps.batch_size, max_enc_seq_len), dtype=np.int32)
+      self.cooccurrence_matrix = np.zeros((hps.batch_size, max_enc_seq_len, max_enc_seq_len), dtype=np.float32)
       for i, ex in enumerate(example_list):
         self.enc_batch_extend_vocab[i, :] = ex.enc_input_extend_vocab[:]
+        for j in range(ex.enc_len):
+          self.cooccurrence_matrix[i, :ex.enc_len, :ex.enc_len] = tf.keras.utils.normalize(ex.cooccurrence_matrix)[:, :]
 
   def init_decoder_seq(self, example_list, hps):
     """Initializes the following:
@@ -221,7 +225,7 @@ class Batcher(object):
 
   BATCH_QUEUE_MAX = 100 # max number of batches the batch_queue can hold
 
-  def __init__(self, data_path, vocab, hps, single_pass):
+  def __init__(self, data_path, vocab, hps, single_pass, stop_words):
     """Initialize the batcher. Start threads that process the data into batches.
 
     Args:
@@ -234,6 +238,7 @@ class Batcher(object):
     self._vocab = vocab
     self._hps = hps
     self._single_pass = single_pass
+    self._stop_words = stop_words
 
     # Initialize a queue of Batches waiting to be used, and a queue of Examples waiting to be batched
     self._batch_queue = Queue.Queue(self.BATCH_QUEUE_MAX)
@@ -309,7 +314,7 @@ class Batcher(object):
       for i in range(self._hps.max_keyphrase_num):
         sent = abstract_sentences_all[i % len(abstract_sentences_all)]
         abstract_sentences = [sent.strip()]
-        example = Example(article, abstract_sentences, abstract_sentences_all, self._vocab, self._hps) # Process into an Example.
+        example = Example(article, abstract_sentences, abstract_sentences_all, self._vocab, self._hps, self._stop_words) # Process into an Example.
         self._example_queue.put(example) # place the Example in the example queue.
 
       # if self._hps.mode == "decode":

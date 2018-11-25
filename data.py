@@ -274,3 +274,51 @@ def show_abs_oovs(abstract, vocab, article_oovs):
       new_words.append(w)
   out_str = ' '.join(new_words)
   return out_str
+
+
+def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
+
+  words_set = list(set(words))
+  length = len(words)
+  size = len(words_set)
+  matrix = [[0] * size for i in range(size)] # 标准词共现矩阵
+
+  def get_match(wds, sets):
+    wd_ids = [sets.index(w) for w in wds] 
+    result = []
+    for i in range(len(wds) - 1):
+      for j in range(i + 1, len(wds)):
+        result.append([wd_ids[i], wd_ids[j]])
+    return result
+
+  for i in range(length):
+    match = get_match(words[i: i + win_size], words_set)
+    for m in match:
+      if words_set[m[0]] not in exclude_words and words_set[m[1]] not in exclude_words: 
+        matrix[m[0]][m[1]] = matrix[m[0]][m[1]] + 1
+        matrix[m[1]][m[0]] = matrix[m[1]][m[0]] + 1
+    if (i + win_size) > (length - 1):
+      break
+
+  result_matrix = [[0] * length for i in range(length)]  
+  for i, w in enumerate(words):
+    if i < length - 2:
+      for j in range(i + 1, length):
+        id1 = words_set.index(w)
+        id2 = words_set.index(words[j])
+        result_matrix[i][j] = matrix[id1][id2]
+        result_matrix[i][j] = matrix[id2][id1]
+
+  return result_matrix
+
+
+def get_stop_word_ids(path, vocab):
+  stop_words = []
+  with open(path, 'r', encoding="utf-8") as f:
+    for line in f:
+      w = line.strip()
+      if w:
+        stop_words.append(w)
+  stop_word_ids = [vocab.word2id(w) for w in stop_words]
+  return stop_word_ids
+

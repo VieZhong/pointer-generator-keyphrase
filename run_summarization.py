@@ -22,7 +22,7 @@ import os
 import tensorflow as tf
 import numpy as np
 from collections import namedtuple
-from data import Vocab
+from data import Vocab, get_stop_word_ids
 from batcher import Batcher
 from model import SummarizationModel
 from decode import BeamSearchDecoder
@@ -34,6 +34,7 @@ FLAGS = tf.app.flags.FLAGS
 # Where to find data
 tf.app.flags.DEFINE_string('data_path', '', 'Path expression to tf.Example datafiles. Can include wildcards to access multiple datafiles.')
 tf.app.flags.DEFINE_string('vocab_path', '', 'Path expression to text vocabulary file.')
+tf.app.flags.DEFINE_string('stop_words_path', '', 'Path expression to stop words file')
 
 # Important settings
 tf.app.flags.DEFINE_string('mode', 'train', 'must be one of train/eval/decode')
@@ -45,6 +46,7 @@ tf.app.flags.DEFINE_string('exp_name', '', 'Name for experiment. Logs will be sa
 
 # Encoder and decoder settings
 tf.app.flags.DEFINE_string('cell_type', 'LSTM', 'LSTM or GRU')
+tf.app.flags.DEFINE_float('dropout', 0.5, 'for dropout')
 
 # Hyperparameters
 tf.app.flags.DEFINE_integer('hidden_dim', 256, 'dimension of RNN hidden states')
@@ -61,7 +63,6 @@ tf.app.flags.DEFINE_float('adagrad_init_acc', 0.1, 'initial accumulator value fo
 tf.app.flags.DEFINE_float('rand_unif_init_mag', 0.02, 'magnitude for lstm cells random uniform inititalization')
 tf.app.flags.DEFINE_float('trunc_norm_init_std', 1e-4, 'std of trunc norm init, used for initializing everything else')
 tf.app.flags.DEFINE_float('max_grad_norm', 2.0, 'for gradient clipping')
-tf.app.flags.DEFINE_float('dropout', 0.5, 'for dropout')
 tf.app.flags.DEFINE_string('optimizer', 'Adagrad', 'Adagrad or Adam')
 
 # Pointer-generator or baseline model
@@ -287,6 +288,10 @@ def main(unused_argv):
 
   vocab = Vocab(FLAGS.vocab_path, FLAGS.vocab_size) # create a vocabulary
 
+  stop_word_ids = []
+  if FLAGS.pointer_gen:
+    stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab)
+
   # If in decode mode, set batch_size = beam_size
   # Reason: in decode mode, we decode one example at a time.
   # On each step, we have beam_size-many hypotheses in the beam, so we need to make a batch of these hypotheses.
@@ -306,7 +311,7 @@ def main(unused_argv):
   hps = namedtuple("HParams", hps_dict.keys())(**hps_dict)
 
   # Create a batcher object that will create minibatches of data
-  batcher = Batcher(FLAGS.data_path, vocab, hps, single_pass=FLAGS.single_pass)
+  batcher = Batcher(FLAGS.data_path, vocab, hps, single_pass=FLAGS.single_pass, stop_words=stop_word_ids)
 
   tf.set_random_seed(111) # a seed value for randomness
 
