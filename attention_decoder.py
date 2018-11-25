@@ -56,6 +56,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
 
     # Reshape encoder_states (need to insert a dim)
     encoder_states = tf.expand_dims(encoder_states, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
+    matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
 
     # To calculate attention, we calculate
     #   v^T tanh(W_h h_i + W_s s_t + b_attn)
