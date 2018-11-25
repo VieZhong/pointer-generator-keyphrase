@@ -180,7 +180,7 @@ class Batch(object):
       self.art_oovs = [ex.article_oovs for ex in example_list]
       # Store the version of the enc_batch that uses the article OOV ids
       self.enc_batch_extend_vocab = np.zeros((hps.batch_size, max_enc_seq_len), dtype=np.int32)
-      self.cooccurrence_matrix = np.zeros((hps.batch_size, max_enc_seq_len, max_enc_seq_len), dtype=np.float32)
+      self.cooccurrence_matrix = np.zeros((hps.batch_size, hps.max_enc_steps, hps.max_enc_steps), dtype=np.float32)
       for i, ex in enumerate(example_list):
         self.enc_batch_extend_vocab[i, :] = ex.enc_input_extend_vocab[:]
         for j in range(ex.enc_len):

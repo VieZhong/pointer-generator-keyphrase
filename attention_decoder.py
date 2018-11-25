@@ -69,7 +69,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
     encoder_features = nn_ops.conv2d(encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
 
-    W_p = variable_scope.get_variable("W_p", [1, 1, attn_size, attention_vec_size])
+    W_p = variable_scope.get_variable("W_p", [1, 1, FLAGS.max_enc_steps, attention_vec_size])
     matrix_features = nn_ops.conv2d(matrix, W_p, [1, 1, 1, 1], "SAME")
 
     # Get the weight vectors v and w_c (w_c is for coverage)
