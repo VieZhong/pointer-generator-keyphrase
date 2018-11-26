@@ -291,9 +291,7 @@ def main(unused_argv):
 
   vocab = Vocab(FLAGS.vocab_path, FLAGS.vocab_size) # create a vocabulary
 
-  stop_word_ids = []
-  if FLAGS.pointer_gen:
-    stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab)
+  stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab) if FLAGS.pointer_gen and FLAG.co_occurence else None
 
   # If in decode mode, set batch_size = beam_size
   # Reason: in decode mode, we decode one example at a time.
@@ -317,6 +315,9 @@ def main(unused_argv):
   batcher = Batcher(FLAGS.data_path, vocab, hps, single_pass=FLAGS.single_pass, stop_words=stop_word_ids)
 
   tf.set_random_seed(111) # a seed value for randomness
+
+  if hps.co_occurence:
+    tf.logging.info('Using words co-occurence matrix factor...')
 
   if hps.mode == 'train':
     print("creating model...")
