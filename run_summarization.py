@@ -73,7 +73,8 @@ tf.app.flags.DEFINE_boolean('coverage', False, 'Use coverage mechanism. Note, th
 tf.app.flags.DEFINE_float('cov_loss_wt', 1.0, 'Weight of coverage loss (lambda in the paper). If zero, then no incentive to minimize coverage loss.')
 
 # Co-occurence Hyperparameters
-tf.app.flags.DEFINE_boolean('co_occurrence', False, 'Wether to use co_occurrence factor.')
+tf.app.flags.DEFINE_boolean('co_occurrence', False, 'Whether to use co_occurrence factor.')
+tf.app.flags.DEFINE_boolean('prev_relation', False, 'Whether to use the previous output word to predict the next output word.')
 
 # Utility flags, for restoring and changing checkpoints
 tf.app.flags.DEFINE_boolean('convert_to_coverage_model', False, 'Convert a non-coverage model to a coverage model. Turn this on and run in train mode. Your current training model will be copied to a new version (same name with _cov_init appended) that will be ready to run with coverage flag turned on, for the coverage training stage.')
@@ -303,8 +304,11 @@ def main(unused_argv):
   if FLAGS.single_pass and FLAGS.mode!='decode':
     raise Exception("The single_pass flag should only be True in decode mode")
 
+  if FLAGS.prev_relation and not FLAGS.co_occurrence:
+    raise Exception("The co_occurrence flag should be True when the prev_relation flag is True")
+
   # Make a namedtuple hps, containing the values of the hyperparameters that the model needs
-  hparam_list = ['dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurrence', 'cov_loss_wt', 'pointer_gen', 'cell_type']
+  hparam_list = ['dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurrence', 'prev_relation', 'cov_loss_wt', 'pointer_gen', 'cell_type']
   hps_dict = {}
   for key,val in FLAGS.__flags.items(): # for each flag
     if key in hparam_list: # if it's in the list
