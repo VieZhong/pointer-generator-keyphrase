@@ -183,8 +183,7 @@ class Batch(object):
       self.cooccurrence_matrix = np.zeros((hps.batch_size, hps.max_enc_steps, hps.max_enc_steps), dtype=np.float32)
       for i, ex in enumerate(example_list):
         self.enc_batch_extend_vocab[i, :] = ex.enc_input_extend_vocab[:]
-        for j in range(ex.enc_len):
-          self.cooccurrence_matrix[i, :ex.enc_len, :ex.enc_len] = tf.keras.utils.normalize(ex.cooccurrence_matrix)[:, :]
+        self.cooccurrence_matrix[i, :ex.enc_len, :ex.enc_len] = tf.keras.utils.normalize(ex.cooccurrence_matrix)[:, :]
 
   def init_decoder_seq(self, example_list, hps):
     """Initializes the following:

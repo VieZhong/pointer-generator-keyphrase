@@ -56,7 +56,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
 
     # Reshape encoder_states (need to insert a dim)
     encoder_states = tf.expand_dims(encoder_states, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
-    matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
+    matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, attn_len, 1, attn_len)
 
     # To calculate attention, we calculate
     #   v^T tanh(W_h h_i + W_s s_t + b_attn)
@@ -68,6 +68,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
     W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
     encoder_features = nn_ops.conv2d(encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
+    encoder_features = tf.slice(encoder_features, [0, 0, 0, 0], [-1, enc_padding_mask.shape[1], -1, -1])
 
     W_p = variable_scope.get_variable("W_p", [1, 1, FLAGS.max_enc_steps, attention_vec_size])
     matrix_features = nn_ops.conv2d(matrix, W_p, [1, 1, 1, 1], "SAME")
