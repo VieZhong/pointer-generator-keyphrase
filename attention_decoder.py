@@ -71,7 +71,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
 
     W_p = variable_scope.get_variable("W_p", [1, 1, FLAGS.max_enc_steps, attention_vec_size])
     matrix_features = nn_ops.conv2d(matrix, W_p, [1, 1, 1, 1], "SAME")
-    matrix_features = tf.slice(matrix_features, [0, 0, 0, 0], [-1, encoder_states.get_shape()[1].value, -1, -1])
+    matrix_features = tf.slice(matrix_features, [0, 0, 0, 0], [-1, tf.shape(enc_padding_mask)[1], -1, -1])
 
     # Get the weight vectors v and w_c (w_c is for coverage)
     v = variable_scope.get_variable("v", [attention_vec_size])
