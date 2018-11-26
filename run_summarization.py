@@ -73,7 +73,7 @@ tf.app.flags.DEFINE_boolean('coverage', False, 'Use coverage mechanism. Note, th
 tf.app.flags.DEFINE_float('cov_loss_wt', 1.0, 'Weight of coverage loss (lambda in the paper). If zero, then no incentive to minimize coverage loss.')
 
 # Co-occurence Hyperparameters
-tf.app.flags.DEFINE_boolean('co_occurence', False, 'Wether to use co_occurence factor.')
+tf.app.flags.DEFINE_boolean('co_occurrence', False, 'Wether to use co_occurrence factor.')
 
 # Utility flags, for restoring and changing checkpoints
 tf.app.flags.DEFINE_boolean('convert_to_coverage_model', False, 'Convert a non-coverage model to a coverage model. Turn this on and run in train mode. Your current training model will be copied to a new version (same name with _cov_init appended) that will be ready to run with coverage flag turned on, for the coverage training stage.')
@@ -291,7 +291,7 @@ def main(unused_argv):
 
   vocab = Vocab(FLAGS.vocab_path, FLAGS.vocab_size) # create a vocabulary
 
-  stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab) if FLAGS.pointer_gen and FLAGS.co_occurence else None
+  stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab) if FLAGS.pointer_gen and FLAGS.co_occurrence else None
 
   # If in decode mode, set batch_size = beam_size
   # Reason: in decode mode, we decode one example at a time.
@@ -304,7 +304,7 @@ def main(unused_argv):
     raise Exception("The single_pass flag should only be True in decode mode")
 
   # Make a namedtuple hps, containing the values of the hyperparameters that the model needs
-  hparam_list = ['dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurence', 'cov_loss_wt', 'pointer_gen', 'cell_type']
+  hparam_list = ['dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurrence', 'cov_loss_wt', 'pointer_gen', 'cell_type']
   hps_dict = {}
   for key,val in FLAGS.__flags.items(): # for each flag
     if key in hparam_list: # if it's in the list
@@ -315,9 +315,6 @@ def main(unused_argv):
   batcher = Batcher(FLAGS.data_path, vocab, hps, single_pass=FLAGS.single_pass, stop_words=stop_word_ids)
 
   tf.set_random_seed(111) # a seed value for randomness
-
-  if hps.co_occurence:
-    tf.logging.info('Using words co-occurence matrix factor...')
 
   if hps.mode == 'train':
     print("creating model...")

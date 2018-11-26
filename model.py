@@ -43,7 +43,7 @@ class SummarizationModel(object):
     if hps.pointer_gen:
       self._enc_batch_extend_vocab = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch_extend_vocab')
       self._max_art_oovs = tf.placeholder(tf.int32, [], name='max_art_oovs')
-      if hps.co_occurence:
+      if hps.co_occurrence:
         self._cooccurrence_matrix = tf.placeholder(tf.float32, [hps.batch_size, None, None], name='cooccurrence_matrix')
 
     # decoder part
@@ -69,7 +69,7 @@ class SummarizationModel(object):
     if FLAGS.pointer_gen:
       feed_dict[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed_dict[self._max_art_oovs] = batch.max_art_oovs
-      if FLAGS.co_occurence:
+      if FLAGS.co_occurrence:
         feed_dict[self._cooccurrence_matrix] = batch.cooccurrence_matrix
     if not just_enc:
       feed_dict[self._dec_batch] = batch.dec_batch
@@ -157,7 +157,7 @@ class SummarizationModel(object):
     cell = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=(1.0 - hps.dropout))
 
     prev_coverage = self.prev_coverage if hps.mode=="decode" and hps.coverage else None # In decode mode, we run attention_decoder one step at a time and so need to pass in the previous step's coverage vector each time
-    co_matrix = self._cooccurrence_matrix if hps.co_occurence else None
+    co_matrix = self._cooccurrence_matrix if hps.co_occurrence else None
     outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix)
 
     return outputs, out_state, attn_dists, p_gens, coverage
@@ -440,7 +440,7 @@ class SummarizationModel(object):
       feed[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed[self._max_art_oovs] = batch.max_art_oovs
       to_return['p_gens'] = self.p_gens
-      if hps.co_occurence:
+      if hps.co_occurrence:
         feed[self._cooccurrence_matrix] = batch.cooccurrence_matrix
 
     if self._hps.coverage:
