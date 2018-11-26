@@ -56,7 +56,6 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
 
     # Reshape encoder_states (need to insert a dim)
     encoder_states = tf.expand_dims(encoder_states, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
-    matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, attn_len, 1, attn_len)
 
     # To calculate attention, we calculate
     #   v^T tanh(W_h h_i + W_s s_t + b_attn)
@@ -69,9 +68,11 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
     encoder_features = nn_ops.conv2d(encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
 
-    W_p = variable_scope.get_variable("W_p", [1, 1, FLAGS.max_enc_steps, attention_vec_size])
-    matrix_features = nn_ops.conv2d(matrix, W_p, [1, 1, 1, 1], "SAME")
-    matrix_features = tf.slice(matrix_features, [0, 0, 0, 0], [-1, tf.shape(enc_padding_mask)[1], -1, -1])
+    if FLAGS.co_occurence:
+      matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, attn_len, 1, attn_len)
+      W_p = variable_scope.get_variable("W_p", [1, 1, FLAGS.max_enc_steps, attention_vec_size])
+      matrix_features = nn_ops.conv2d(matrix, W_p, [1, 1, 1, 1], "SAME")
+      matrix_features = tf.slice(matrix_features, [0, 0, 0, 0], [-1, tf.shape(enc_padding_mask)[1], -1, -1])
 
     # Get the weight vectors v and w_c (w_c is for coverage)
     v = variable_scope.get_variable("v", [attention_vec_size])
@@ -108,11 +109,16 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
           return attn_dist / tf.reshape(masked_sums, [-1, 1]) # re-normalize
 
         if use_coverage and coverage is not None: # non-first step of coverage
+
           # Multiply coverage vector by w_c to get coverage_features.
           coverage_features = nn_ops.conv2d(coverage, w_c, [1, 1, 1, 1], "SAME") # c has shape (batch_size, attn_length, 1, attention_vec_size)
 
+          sum_features = encoder_features + decoder_features + coverage_features
+          if FLAGS.co_occurence:
+            sum_features += matrix_features
+
           # Calculate v^T tanh(W_h h_i + W_s s_t + w_c c_i^t + b_attn)
-          e = math_ops.reduce_sum(v * math_ops.tanh(encoder_features + decoder_features + coverage_features + matrix_features), [2, 3])  # shape (batch_size,attn_length)
+          e = math_ops.reduce_sum(v * math_ops.tanh(sum_features), [2, 3])  # shape (batch_size,attn_length)
 
           # Calculate attention distribution
           attn_dist = masked_attention(e)
@@ -121,7 +127,10 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
           coverage += array_ops.reshape(attn_dist, [batch_size, -1, 1, 1])
         else:
           # Calculate v^T tanh(W_h h_i + W_s s_t + b_attn)
-          e = math_ops.reduce_sum(v * math_ops.tanh(encoder_features + decoder_features + matrix_features), [2, 3]) # calculate e
+          sum_features = encoder_features + decoder_features
+          if FLAGS.co_occurence:
+            sum_features += matrix_features
+          e = math_ops.reduce_sum(v * math_ops.tanh(sum_features), [2, 3]) # calculate e
 
           # Calculate attention distribution
           attn_dist = masked_attention(e)
