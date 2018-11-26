@@ -333,9 +333,8 @@ class Batcher(object):
       if self._hps.mode != 'decode':
         # Get bucketing_cache_size-many batches of Examples into a list, then sort
         inputs = []
+        range_num = self._hps.batch_size * self._bucketing_cache_size * self._hps.max_keyphrase_num
         if self._hps.co_occurrence:
-          range_num = self._hps.batch_size * self._bucketing_cache_size * self._hps.max_keyphrase_num
-        else:
           range_num = self._hps.batch_size * 4
         for _ in range(range_num):
           inputs.append(self._example_queue.get())

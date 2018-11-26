@@ -20,6 +20,7 @@ import glob
 import random
 import struct
 import csv
+import hashlib
 from tensorflow.core.example import example_pb2
 
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
@@ -33,6 +34,7 @@ STOP_DECODING = '[STOP]' # This has a vocab id, which is used at the end of untr
 
 # Note: none of <s>, </s>, [PAD], [UNK], [START], [STOP] should appear in the vocab file.
 
+co_matrix_store = dict()
 
 class Vocab(object):
   """Vocabulary class for mapping between words and ids (integers)"""
@@ -276,7 +278,18 @@ def show_abs_oovs(abstract, vocab, article_oovs):
   return out_str
 
 
+def hashhex(s):
+  """Returns a heximal formated SHA1 hash of the input string."""
+  h = hashlib.sha1()
+  h.update(s.encode('utf-8'))
+  return h.hexdigest()
+
+
 def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
+  h = hashhex('-'.join(words))
+
+  if h in co_matrix_store:
+    return co_matrix_store[h]
 
   words_set = list(set(words))
   length = len(words)
@@ -309,6 +322,8 @@ def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
         result_matrix[i][j] = matrix[id1][id2]
         result_matrix[i][j] = matrix[id2][id1]
 
+  co_matrix_store[h] = result_matrix
+  
   return result_matrix
 
 
