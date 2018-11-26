@@ -68,10 +68,10 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
     W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
     encoder_features = nn_ops.conv2d(encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
-    encoder_features = tf.slice(encoder_features, [0, 0, 0, 0], [-1, enc_padding_mask.get_shape()[1].value, -1, -1])
 
     W_p = variable_scope.get_variable("W_p", [1, 1, FLAGS.max_enc_steps, attention_vec_size])
     matrix_features = nn_ops.conv2d(matrix, W_p, [1, 1, 1, 1], "SAME")
+    matrix_features = tf.slice(matrix_features, [0, 0, 0, 0], [-1, encoder_states.get_shape()[1].value, -1, -1])
 
     # Get the weight vectors v and w_c (w_c is for coverage)
     v = variable_scope.get_variable("v", [attention_vec_size])
