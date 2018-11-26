@@ -197,6 +197,11 @@ def run_training(model, batcher, sess_context_manager, sv, summary_writer):
       sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
     while True: # repeats until interrupted
       batch = batcher.next_batch()
+      if batch:
+        tf.logging.info('batch size: %s', len(batch))
+      else:
+        tf.logging.info('batch size: %s', 0)
+        continue
 
       tf.logging.info('running training step...')
       t0=time.time()
