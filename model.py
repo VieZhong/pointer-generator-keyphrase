@@ -196,7 +196,7 @@ class SummarizationModel(object):
 
       if self._hps.prev_relation:
         co_matrix = tf.slice(self._cooccurrence_matrix, [0, 0, 0], [-1, attn_len, attn_len])
-        relation_dists = [m[v.index(x)] if x in v else [0] * attn_len for (x, v, m) in zip(self._dec_batch, self._enc_batch_extend_vocab, co_matrix)]
+        relation_dists = [(1 - p) * m[v.index(x)] if x in v else [0] * attn_len for (x, v, m, p) in zip(self._dec_batch, self._enc_batch_extend_vocab, co_matrix, self.p_gens)]
         relation_dists_projected = [tf.scatter_nd(indices, relation_dist, shape) for relation_dist in relation_dists]
         final_dists = [vocab_dist + copy_dist + relation_dist for (vocab_dist, copy_dist, relation_dist) in zip(vocab_dists_extended, attn_dists_projected, relation_dists_projected)]
       else:
