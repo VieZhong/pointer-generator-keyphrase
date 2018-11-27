@@ -200,9 +200,8 @@ class SummarizationModel(object):
         relation_dists = []
         for i in range(self._hps.max_dec_steps):
           single_relation_dists = []
-          p = self.p_gens[i]
           for j in range(self._hps.batch_size):
-            m = (1 - p[j]) * co_matrix[j]
+            m = co_matrix[j]
             v = self._enc_batch_extend_vocab[j]
             x = self._dec_batch[j][i]
             t = tf.where(tf.equal(v, x))
@@ -210,7 +209,7 @@ class SummarizationModel(object):
             single_relation_dists.append(d)
           relation_dists.append(single_relation_dists)
 
-        relation_dists_projected = [tf.scatter_nd(indices, relation_dist, shape) for relation_dist in relation_dists]
+        relation_dists_projected = [tf.scatter_nd(indices, (1 - p_gen) * relation_dist, shape) for (relation_dist, p_gen) in zip(relation_dists, self.p_gens)]
         final_dists = [vocab_dist + copy_dist + relation_dist for (vocab_dist, copy_dist, relation_dist) in zip(vocab_dists_extended, attn_dists_projected, relation_dists_projected)]
       else:
         # Add the vocab distributions and the copy distributions together to get the final distributions
