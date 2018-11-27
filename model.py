@@ -69,7 +69,7 @@ class SummarizationModel(object):
     if FLAGS.pointer_gen:
       feed_dict[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed_dict[self._max_art_oovs] = batch.max_art_oovs
-      if FLAGS.co_occurrence or hps.prev_relation:
+      if FLAGS.co_occurrence or FLAGS.prev_relation:
         feed_dict[self._cooccurrence_matrix] = batch.cooccurrence_matrix
     if not just_enc:
       feed_dict[self._dec_batch] = batch.dec_batch
