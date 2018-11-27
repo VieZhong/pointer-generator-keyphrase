@@ -292,7 +292,7 @@ def main(unused_argv):
 
   vocab = Vocab(FLAGS.vocab_path, FLAGS.vocab_size) # create a vocabulary
 
-  stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab) if FLAGS.pointer_gen and FLAGS.co_occurrence else None
+  stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab) if FLAGS.pointer_gen and (FLAGS.co_occurrence or FLAGS.prev_relation) else None
 
   # If in decode mode, set batch_size = beam_size
   # Reason: in decode mode, we decode one example at a time.
@@ -304,8 +304,8 @@ def main(unused_argv):
   if FLAGS.single_pass and FLAGS.mode!='decode':
     raise Exception("The single_pass flag should only be True in decode mode")
 
-  if FLAGS.prev_relation and not FLAGS.co_occurrence:
-    raise Exception("The co_occurrence flag should be True when the prev_relation flag is True")
+  # if FLAGS.prev_relation and not FLAGS.co_occurrence:
+  #   raise Exception("The co_occurrence flag should be True when the prev_relation flag is True")
 
   # Make a namedtuple hps, containing the values of the hyperparameters that the model needs
   hparam_list = ['dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurrence', 'prev_relation', 'cov_loss_wt', 'pointer_gen', 'cell_type']

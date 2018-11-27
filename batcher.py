@@ -63,7 +63,7 @@ class Example(object):
     if hps.pointer_gen:
       # Store a version of the enc_input where in-article OOVs are represented by their temporary OOV id; also store the in-article OOVs words themselves
       self.enc_input_extend_vocab, self.article_oovs = data.article2ids(article_words, vocab)
-      if hps.co_occurrence:
+      if hps.co_occurrence or hps.prev_relation:
         self.cooccurrence_matrix = data.get_cooccurrence_matrix(self.enc_input_extend_vocab, exclude_words=stop_words)
       # Get a verison of the reference summary where in-article OOVs are represented by their temporary article OOV id
       abs_ids_extend_vocab = data.abstract2ids(abstract_words, vocab, self.article_oovs)
@@ -180,11 +180,11 @@ class Batch(object):
       self.art_oovs = [ex.article_oovs for ex in example_list]
       # Store the version of the enc_batch that uses the article OOV ids
       self.enc_batch_extend_vocab = np.zeros((hps.batch_size, max_enc_seq_len), dtype=np.int32)
-      if hps.co_occurrence:
+      if hps.co_occurrence or hps.prev_relation:
         self.cooccurrence_matrix = np.zeros((hps.batch_size, hps.max_enc_steps, hps.max_enc_steps), dtype=np.float32)
       for i, ex in enumerate(example_list):
         self.enc_batch_extend_vocab[i, :] = ex.enc_input_extend_vocab[:]
-        if hps.co_occurrence:
+        if hps.co_occurrence or hps.prev_relation:
           self.cooccurrence_matrix[i, :ex.enc_len, :ex.enc_len] = tf.keras.utils.normalize(ex.cooccurrence_matrix)[:, :]
 
   def init_decoder_seq(self, example_list, hps):

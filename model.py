@@ -43,7 +43,7 @@ class SummarizationModel(object):
     if hps.pointer_gen:
       self._enc_batch_extend_vocab = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch_extend_vocab')
       self._max_art_oovs = tf.placeholder(tf.int32, [], name='max_art_oovs')
-      if hps.co_occurrence:
+      if hps.co_occurrence or hps.prev_relation:
         self._cooccurrence_matrix = tf.placeholder(tf.float32, [hps.batch_size, None, None], name='cooccurrence_matrix')
 
     # decoder part
@@ -69,7 +69,7 @@ class SummarizationModel(object):
     if FLAGS.pointer_gen:
       feed_dict[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed_dict[self._max_art_oovs] = batch.max_art_oovs
-      if FLAGS.co_occurrence:
+      if FLAGS.co_occurrence or hps.prev_relation:
         feed_dict[self._cooccurrence_matrix] = batch.cooccurrence_matrix
     if not just_enc:
       feed_dict[self._dec_batch] = batch.dec_batch
@@ -458,7 +458,7 @@ class SummarizationModel(object):
       feed[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed[self._max_art_oovs] = batch.max_art_oovs
       to_return['p_gens'] = self.p_gens
-      if hps.co_occurrence:
+      if hps.co_occurrence or hps.prev_relation:
         feed[self._cooccurrence_matrix] = batch.cooccurrence_matrix
 
     if self._hps.coverage:
