@@ -22,6 +22,7 @@ import struct
 import csv
 import hashlib
 from tensorflow.core.example import example_pb2
+from collections import OrderedDict
 
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
 SENTENCE_START = '<s>'
