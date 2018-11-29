@@ -34,7 +34,26 @@ STOP_DECODING = '[STOP]' # This has a vocab id, which is used at the end of untr
 
 # Note: none of <s>, </s>, [PAD], [UNK], [START], [STOP] should appear in the vocab file.
 
-co_matrix_store = dict()
+class LastUpdatedOrderedDict(OrderedDict):
+
+    def __init__(self, capacity):
+        super().__init__()
+        #super(LastUpdatedOrderedDict, self).__init__()
+        self._capacity = capacity
+
+    def __setitem__(self, key, value):         
+        containsKey = 1 if key in self else 0
+        # 如果dict容量已满
+        if len(self) - containsKey >= self._capacity:
+            # 则删除最先添加的key
+            last = self.popitem(last=False)
+        # 检查dict里是否已经存在要增加的(key,value)中的key
+        if containsKey:
+          # 删除原来的key
+          del self[key]
+        OrderedDict.__setitem__(self, key, value)
+
+co_matrix_store = LastUpdatedOrderedDict(1000)
 
 class Vocab(object):
   """Vocabulary class for mapping between words and ids (integers)"""
