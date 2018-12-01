@@ -33,6 +33,8 @@ UNKNOWN_TOKEN = '[UNK]' # This has a vocab id, which is used to represent out-of
 START_DECODING = '[START]' # This has a vocab id, which is used at the start of every decoder input sequence
 STOP_DECODING = '[STOP]' # This has a vocab id, which is used at the end of untruncated target sequences
 
+PUNCTUATION_MARKS = [",", ".", "?", "!", "-", "'", "\"", "[", "]", "@", "+", "&", "$", ";", ":", "/", "|", "~"]
+
 # Note: none of <s>, </s>, [PAD], [UNK], [START], [STOP] should appear in the vocab file.
 
 class LastUpdatedOrderedDict(OrderedDict):
@@ -306,9 +308,8 @@ def hashhex(s):
 
 
 def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
-  exclude_words.extend([",", ".", "?", "!", "-", "'", "\"", "[", "]", "@", "+", "&", "$", ";", ":", "/", "|", "~"])
-  h = hashhex('-'.join([str(x) for x in words]))
 
+  h = hashhex('-'.join([str(x) for x in words]))
   if h in co_matrix_store:
     return co_matrix_store[h]
 
@@ -316,6 +317,11 @@ def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
   length = len(words)
   size = len(words_set)
   matrix = [[0] * size for i in range(size)] # 标准词共现矩阵
+
+  def is_ok(w):
+    if w not in exclude_words and w not in PUNCTUATION_MARKS:
+      return True
+    return False
 
   def get_match(wds, sets):
     wd_ids = [sets.index(w) for w in wds] 
@@ -328,7 +334,7 @@ def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
   for i in range(length):
     match = get_match(words[i: i + win_size], words_set)
     for m in match:
-      if words_set[m[0]] not in exclude_words and words_set[m[1]] not in exclude_words: 
+      if is_ok(words_set[m[0]]) and is_ok(words_set[m[1]]): 
         matrix[m[0]][m[1]] = matrix[m[0]][m[1]] + 1
         # matrix[m[1]][m[0]] = matrix[m[1]][m[0]] + 1
     if (i + win_size) > (length - 1):

@@ -106,15 +106,15 @@ class BeamSearchDecoder(object):
       all_hyp = beam_search.run_beam_search(self._sess, self._model, self._vocab, batch)
       best_hyp = all_hyp[0]
 
-      i = 0;
       decoded_words = []
       for hyp in all_hyp:
-        if i < len(original_abstract_sents):
-          i = i + 1
+        if len(decoded_words) < len(original_abstract_sents):
           # Extract the output ids from the hypothesis and convert back to words
           output_ids = [int(t) for t in hyp.tokens[1:]]
           decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
 
+          if not len(decoded_words) or decoded_words_1[0] in [words[0] for words in decoded_words]
+            continue
           # Remove the [STOP] token from decoded_words, if necessary
           try:
             fst_stop_idx = decoded_words_1.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
