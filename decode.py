@@ -113,7 +113,7 @@ class BeamSearchDecoder(object):
           output_ids = [int(t) for t in hyp.tokens[1:]]
           decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
 
-          if not len(decoded_words) or decoded_words_1[0] in [words[0] for words in decoded_words]
+          if not len(decoded_words) or decoded_words_1[0] in [words[0] for words in decoded_words]:
             continue
           # Remove the [STOP] token from decoded_words, if necessary
           try:
