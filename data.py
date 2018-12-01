@@ -306,6 +306,7 @@ def hashhex(s):
 
 
 def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
+  exclude_words.extend([",", ".", "?", "!", "-", "'", "\"", "[", "]", "@", "+", "&", "$", ";", ":", "/", "|", "~"])
   h = hashhex('-'.join([str(x) for x in words]))
 
   if h in co_matrix_store:
