@@ -329,18 +329,16 @@ def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
     for m in match:
       if words_set[m[0]] not in exclude_words and words_set[m[1]] not in exclude_words: 
         matrix[m[0]][m[1]] = matrix[m[0]][m[1]] + 1
-        matrix[m[1]][m[0]] = matrix[m[1]][m[0]] + 1
+        # matrix[m[1]][m[0]] = matrix[m[1]][m[0]] + 1
     if (i + win_size) > (length - 1):
       break
 
   result_matrix = [[0] * length for i in range(length)]  
-  for i, w in enumerate(words):
-    if i < length - 2:
-      for j in range(i + 1, length):
-        id1 = words_set.index(w)
-        id2 = words_set.index(words[j])
-        result_matrix[i][j] = matrix[id1][id2]
-        result_matrix[i][j] = matrix[id2][id1]
+  for i, w1 in enumerate(words):
+    for j, w2 in enumerate(words):
+      id1 = words_set.index(w1)
+      id2 = words_set.index(w2)
+      result_matrix[i][j] = matrix[id1][id2]
 
   co_matrix_store[h] = result_matrix
   
