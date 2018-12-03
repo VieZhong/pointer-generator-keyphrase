@@ -74,6 +74,7 @@ tf.app.flags.DEFINE_float('cov_loss_wt', 1.0, 'Weight of coverage loss (lambda i
 
 # Co-occurence Hyperparameters
 tf.app.flags.DEFINE_boolean('co_occurrence', False, 'Whether to use co_occurrence factor.')
+tf.app.flags.DEFINE_boolean('co_occurrence_h', False, 'Whether to use co_occurrence_h factor.')
 tf.app.flags.DEFINE_boolean('prev_relation', False, 'Whether to use the previous output word to predict the next output word.')
 
 # Utility flags, for restoring and changing checkpoints
@@ -292,7 +293,7 @@ def main(unused_argv):
 
   vocab = Vocab(FLAGS.vocab_path, FLAGS.vocab_size) # create a vocabulary
 
-  stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab) if FLAGS.pointer_gen and (FLAGS.co_occurrence or FLAGS.prev_relation) else None
+  stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab) if FLAGS.pointer_gen and (FLAGS.co_occurrence or FLAGS.prev_relation or FLAGS.co_occurrence_h) else None
 
   # If in decode mode, set batch_size = beam_size
   # Reason: in decode mode, we decode one example at a time.
@@ -308,7 +309,7 @@ def main(unused_argv):
   #   raise Exception("The co_occurrence flag should be True when the prev_relation flag is True")
 
   # Make a namedtuple hps, containing the values of the hyperparameters that the model needs
-  hparam_list = ['dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurrence', 'prev_relation', 'cov_loss_wt', 'pointer_gen', 'cell_type']
+  hparam_list = ['dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'cov_loss_wt', 'pointer_gen', 'cell_type']
   hps_dict = {}
   for key,val in FLAGS.__flags.items(): # for each flag
     if key in hparam_list: # if it's in the list

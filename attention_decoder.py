@@ -26,7 +26,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # Note: this function is based on tf.contrib.legacy_seq2seq_attention_decoder, which is now outdated.
 # In the future, it would make more sense to write variants on the attention mechanism using the new seq2seq library for tensorflow 1.0: https://www.tensorflow.org/api_guides/python/contrib.seq2seq#Attention
-def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None):
+def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None):
   """
   Args:
     decoder_inputs: A list of 2D Tensors [batch_size x input_size].
@@ -69,9 +69,9 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     encoder_features = nn_ops.conv2d(encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
 
     if FLAGS.co_occurrence:
-      matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, attn_len, 1, attn_len)
+      c_matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, attn_len, 1, attn_len)
       W_p = variable_scope.get_variable("W_p", [1, 1, FLAGS.max_enc_steps, attention_vec_size])
-      matrix_features = nn_ops.conv2d(matrix, W_p, [1, 1, 1, 1], "SAME")
+      matrix_features = nn_ops.conv2d(c_matrix, W_p, [1, 1, 1, 1], "SAME")
       matrix_features = tf.slice(matrix_features, [0, 0, 0, 0], [-1, tf.shape(enc_padding_mask)[1], -1, -1])
 
     # Get the weight vectors v and w_c (w_c is for coverage)
@@ -84,7 +84,11 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       # reshape from (batch_size, attn_length) to (batch_size, attn_len, 1, 1)
       prev_coverage = tf.expand_dims(tf.expand_dims(prev_coverage,2),3)
 
-    def attention(decoder_state, coverage=None):
+    if FLAGS.co_occurrence_h:
+      attn_len = tf.shape(enc_padding_mask)[1]
+      co_matrix = tf.slice(matrix, [0, 0, 0], [-1, attn_len, attn_len]) # shape (batch_size, attn_length, attn_length).
+
+    def attention(decoder_state, coverage=None, input_ids=None):
       """Calculate the context vector and attention distribution from the decoder state.
 
       Args:
@@ -136,10 +140,22 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
           attn_dist = masked_attention(e)
 
           if use_coverage: # first step of training
-            coverage = tf.expand_dims(tf.expand_dims(attn_dist,2),2) # initialize coverage
+            coverage = tf.expand_dims(tf.expand_dims(attn_dist,2), 2) # initialize coverage
 
         # Calculate the context vector from attn_dist and encoder_states
-        context_vector = math_ops.reduce_sum(array_ops.reshape(attn_dist, [batch_size, -1, 1, 1]) * encoder_states, [1, 2]) # shape (batch_size, attn_size).
+        if not FLAGS.co_occurrence_h: 
+          context_vector = math_ops.reduce_sum(array_ops.reshape(attn_dist, [batch_size, -1, 1, 1]) * encoder_states, [1, 2]) # shape (batch_size, attn_size).
+        else:
+          p_oc = tf.get_variable("p_oc", [1], initializer=tf.constant_initializer(0.2))
+          p_dist = []
+          for j in range(FLAGS.batch_size):
+            m = co_matrix[j]
+            v = enc_batch_extend_vocab[j]
+            x = input_ids[j]
+            t = tf.where(tf.equal(v, x))
+            d = tf.cond(tf.shape(t)[0] > 0, lambda: m[t[0][0]], lambda: tf.zeros([attn_len]))
+            p_dist.append(d)
+          context_vector = math_ops.reduce_sum(array_ops.reshape((p_oc *  p_dist + (1 - p_oc) * attn_dist), [batch_size, -1, 1, 1]) * encoder_states, [1, 2]) # shape (batch_size, attn_size).
         context_vector = array_ops.reshape(context_vector, [-1, attn_size])
 
       return context_vector, attn_dist, coverage
@@ -173,7 +189,10 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
         with variable_scope.variable_scope(variable_scope.get_variable_scope(), reuse=True): # you need this because you've already run the initial attention(...) call
           context_vector, attn_dist, _ = attention(state, coverage) # don't allow coverage to update
       else:
-        context_vector, attn_dist, coverage = attention(state, coverage)
+        if not FLAGS.co_occurrence_h:
+          context_vector, attn_dist, coverage = attention(state, coverage)
+        else:
+          context_vector, attn_dist, coverage = attention(state, coverage, decoder_input_ids[i])
       attn_dists.append(attn_dist)
 
       # Calculate p_gen

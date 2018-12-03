@@ -319,7 +319,7 @@ def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
   matrix = [[0] * size for i in range(size)] # 标准词共现矩阵
 
   def is_ok(w):
-    if w not in exclude_words and w not in PUNCTUATION_MARKS:
+    if w not in PUNCTUATION_MARKS and w not in exclude_words:
       return True
     return False
 

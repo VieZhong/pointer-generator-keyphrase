@@ -43,7 +43,7 @@ class SummarizationModel(object):
     if hps.pointer_gen:
       self._enc_batch_extend_vocab = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch_extend_vocab')
       self._max_art_oovs = tf.placeholder(tf.int32, [], name='max_art_oovs')
-      if hps.co_occurrence or hps.prev_relation:
+      if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
         self._cooccurrence_matrix = tf.placeholder(tf.float32, [hps.batch_size, None, None], name='cooccurrence_matrix')
 
     # decoder part
@@ -69,7 +69,7 @@ class SummarizationModel(object):
     if FLAGS.pointer_gen:
       feed_dict[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed_dict[self._max_art_oovs] = batch.max_art_oovs
-      if FLAGS.co_occurrence or FLAGS.prev_relation:
+      if FLAGS.co_occurrence or FLAGS.prev_relation or FLAGS.co_occurrence_h:
         feed_dict[self._cooccurrence_matrix] = batch.cooccurrence_matrix
     if not just_enc:
       feed_dict[self._dec_batch] = batch.dec_batch
@@ -136,7 +136,7 @@ class SummarizationModel(object):
         new_h = tf.nn.relu(tf.matmul(old_h, w_reduce_h) + bias_reduce_h) # Get new state from old state
         return tf.contrib.rnn.LSTMStateTuple(new_c, new_h) # Return new cell and state
 
-  def _add_decoder(self, inputs):
+  def _add_decoder(self, inputs, decoder_input_ids):
     """Add attention decoder to the graph. In train or eval mode, you call this once to get output on ALL steps. In decode (beam search) mode, you call this once for EACH decoder step.
 
     Args:
@@ -157,8 +157,9 @@ class SummarizationModel(object):
     cell = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=(1.0 - hps.dropout))
 
     prev_coverage = self.prev_coverage if hps.mode=="decode" and hps.coverage else None # In decode mode, we run attention_decoder one step at a time and so need to pass in the previous step's coverage vector each time
-    co_matrix = self._cooccurrence_matrix if hps.co_occurrence else None
-    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix)
+    co_matrix = self._cooccurrence_matrix if hps.co_occurrence or hps.co_occurrence_h else None
+    enc_batch_extend_vocab = self._enc_batch_extend_vocab if hps.co_occurrence_h else None
+    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab, decoder_input_ids)
 
     return outputs, out_state, attn_dists, p_gens, coverage
 
@@ -250,6 +251,7 @@ class SummarizationModel(object):
         if hps.mode=="train": self._add_emb_vis(embedding) # add to tensorboard
         emb_enc_inputs = tf.nn.embedding_lookup(embedding, self._enc_batch) # tensor with shape (batch_size, max_enc_steps, emb_size)
         emb_dec_inputs = [tf.nn.embedding_lookup(embedding, x) for x in tf.unstack(self._dec_batch, axis=1)] # list length max_dec_steps containing shape (batch_size, emb_size)
+        decoder_input_ids = [x for x in tf.unstack(self._dec_batch, axis=1)] if hps.co_occurrence_h else None
 
       # Add the encoder.
         enc_outputs, fw_st, bw_st = self._add_encoder(emb_enc_inputs, self._enc_lens)
@@ -259,7 +261,7 @@ class SummarizationModel(object):
 
       # Add the decoder.
       with tf.variable_scope('decoder'):
-        decoder_outputs, self._dec_out_state, self.attn_dists, self.p_gens, self.coverage = self._add_decoder(emb_dec_inputs)
+        decoder_outputs, self._dec_out_state, self.attn_dists, self.p_gens, self.coverage = self._add_decoder(emb_dec_inputs, decoder_input_ids)
 
       # Add the output projection to obtain the vocabulary distribution
       with tf.variable_scope('output_projection'):
@@ -459,7 +461,7 @@ class SummarizationModel(object):
       feed[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed[self._max_art_oovs] = batch.max_art_oovs
       to_return['p_gens'] = self.p_gens
-      if hps.co_occurrence or hps.prev_relation:
+      if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
         feed[self._cooccurrence_matrix] = batch.cooccurrence_matrix
 
     if self._hps.coverage:
