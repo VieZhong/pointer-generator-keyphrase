@@ -82,7 +82,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
 
     if prev_coverage is not None: # for beam search mode with coverage
       # reshape from (batch_size, attn_length) to (batch_size, attn_len, 1, 1)
-      prev_coverage = tf.expand_dims(tf.expand_dims(prev_coverage,2),3)
+      prev_coverage = tf.expand_dims(tf.expand_dims(prev_coverage, 2), 3)
 
     if FLAGS.co_occurrence_h:
       attn_len = tf.shape(enc_padding_mask)[1]
@@ -140,7 +140,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
           attn_dist = masked_attention(e)
 
           if use_coverage: # first step of training
-            coverage = tf.expand_dims(tf.expand_dims(attn_dist,2), 2) # initialize coverage
+            coverage = tf.expand_dims(tf.expand_dims(attn_dist, 2), 2) # initialize coverage
 
         # Calculate the context vector from attn_dist and encoder_states
         if not FLAGS.co_occurrence_h: 

@@ -33,7 +33,7 @@ UNKNOWN_TOKEN = '[UNK]' # This has a vocab id, which is used to represent out-of
 START_DECODING = '[START]' # This has a vocab id, which is used at the start of every decoder input sequence
 STOP_DECODING = '[STOP]' # This has a vocab id, which is used at the end of untruncated target sequences
 
-PUNCTUATION_MARKS = [",", ".", "?", "!", "-", "'", "\"", "[", "]", "@", "+", "&", "$", ";", ":", "/", "|", "~"]
+PUNCTUATION_MARKS = [",", ".", "?", "!", "-", "'", "\"", "[", "]", "@", "+", "&", "$", ";", ":", "/", "|", "~"， "_"]
 
 # Note: none of <s>, </s>, [PAD], [UNK], [START], [STOP] should appear in the vocab file.
 
@@ -306,7 +306,7 @@ def hashhex(s):
   h.update(s.encode('utf-8'))
   return h.hexdigest()
 
-
+# 获取单向词共现矩阵
 def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
 
   h = hashhex('-'.join([str(x) for x in words]))
@@ -342,8 +342,8 @@ def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
 
   result_matrix = [[0] * length for i in range(length)]  
   for i, w1 in enumerate(words):
+    id1 = words_set.index(w1)
     for j, w2 in enumerate(words):
-      id1 = words_set.index(w1)
       id2 = words_set.index(w2)
       result_matrix[i][j] = matrix[id1][id2]
 
