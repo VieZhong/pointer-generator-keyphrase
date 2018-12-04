@@ -215,8 +215,8 @@ def run_training(model, batcher, sess_context_manager, sv, summary_writer):
       tf.logging.info('loss: %f', loss) # print the loss to screen
 
       if not np.isfinite(loss):
-        # raise Exception("Loss is not finite. Stopping.")
-        continue
+        raise Exception("Loss is not finite. Stopping.")
+        # continue
 
       if FLAGS.coverage:
         coverage_loss = results['coverage_loss']
