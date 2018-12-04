@@ -125,7 +125,7 @@ def run_beam_search(sess, model, vocab, batch):
     num_orig_hyps = 1 if steps == 0 else len(hyps) # On the first step, we only had one original hypothesis (the initial hypothesis). On subsequent steps, all original hypotheses are distinct.
     for i in range(num_orig_hyps):
       h, new_state, attn_dist, p_gen, new_coverage_i = hyps[i], new_states[i], attn_dists[i], p_gens[i], new_coverage[i]  # take the ith hypothesis and new decoder state info
-      for j in range(FLAGS.beam_size * 2):  # for each of the top 2*beam_size hyps:
+      for j in range(FLAGS.beam_size * 2 * 4):  # for each of the top 2*beam_size hyps:
         # Extend the ith hypothesis with the jth option
         new_hyp = h.extend(token=topk_ids[i, j],
                            log_prob=topk_log_probs[i, j],

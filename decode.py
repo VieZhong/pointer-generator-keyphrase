@@ -113,7 +113,7 @@ class BeamSearchDecoder(object):
           output_ids = [int(t) for t in hyp.tokens[1:]]
           decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
 
-          while len(decoded_words_1) and decoded_words_1[0][0] in [',', '.', '-lrb-']:
+          while len(decoded_words_1) and decoded_words_1[0] in [',', '.', '-lrb-']:
             decoded_words_1 = decoded_words_1[1:]
           for symbol in [',', '.', '-lrb-']:
             try:
