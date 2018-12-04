@@ -347,7 +347,8 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[]):
     for j, w2 in enumerate(words):
       id2 = words_set.index(w2)
       result_matrix[i][j] = matrix[id1][id2]
-
+      
+  result_matrix = softmax(result_matrix)
   co_matrix_store[h] = result_matrix
   
   return result_matrix
@@ -362,4 +363,14 @@ def get_stop_word_ids(path, vocab):
         stop_words.append(w)
   stop_word_ids = [vocab.word2id(w) for w in stop_words]
   return stop_word_ids
+
+
+def softmax(z):
+    assert len(z.shape) == 2
+    s = np.max(z, axis=1)
+    s = s[:, np.newaxis] # necessary step to do broadcasting
+    e_x = np.exp(z - s)
+    div = np.sum(e_x, axis=1)
+    div = div[:, np.newaxis] # dito
+    return e_x / div
 
