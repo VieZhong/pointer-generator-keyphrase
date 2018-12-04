@@ -196,7 +196,7 @@ class SummarizationModel(object):
       attn_dists_projected = [tf.scatter_nd(indices, copy_dist, shape) for copy_dist in attn_dists] # list length max_dec_steps (batch_size, extended_vsize)
 
       if self._hps.prev_relation:
-        p_r = tf.get_variable("p_r", [1], initializer=tf.constant_initializer(0.5))
+        p_r = tf.get_variable("p_r", [1], initializer=tf.constant_initializer(0.2))
         co_matrix = tf.slice(self._cooccurrence_matrix, [0, 0, 0], [-1, attn_len, attn_len])
         
         relation_dists = []
