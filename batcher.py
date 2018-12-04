@@ -64,10 +64,9 @@ class Example(object):
       # Store a version of the enc_input where in-article OOVs are represented by their temporary OOV id; also store the in-article OOVs words themselves
       self.enc_input_extend_vocab, self.article_oovs = data.article2ids(article_words, vocab)
       if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
-        with tf.device("/gpu:0"):
-          cooccurrence_matrix = data.get_cooccurrence_matrix(self.enc_input_extend_vocab, exclude_words=stop_words)
-          cooccurrence_matrix = tf.nn.softmax(cooccurrence_matrix)
-          self.cooccurrence_matrix = tf.Session().run(cooccurrence_matrix)
+        cooccurrence_matrix = data.get_cooccurrence_matrix(self.enc_input_extend_vocab, exclude_words=stop_words)
+        cooccurrence_matrix = tf.nn.softmax(cooccurrence_matrix)
+        self.cooccurrence_matrix = tf.Session().run(cooccurrence_matrix)
       # Get a verison of the reference summary where in-article OOVs are represented by their temporary article OOV id
       abs_ids_extend_vocab = data.abstract2ids(abstract_words, vocab, self.article_oovs)
 

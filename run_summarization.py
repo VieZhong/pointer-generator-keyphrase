@@ -319,8 +319,9 @@ def main(unused_argv):
       hps_dict[key] = val # add it to the dict
   hps = namedtuple("HParams", hps_dict.keys())(**hps_dict)
 
-  # Create a batcher object that will create minibatches of data
-  batcher = Batcher(FLAGS.data_path, vocab, hps, single_pass=FLAGS.single_pass, stop_words=stop_word_ids)
+  with tf.device("/gpu:0"):
+    # Create a batcher object that will create minibatches of data
+    batcher = Batcher(FLAGS.data_path, vocab, hps, single_pass=FLAGS.single_pass, stop_words=stop_word_ids)
 
   tf.set_random_seed(111) # a seed value for randomness
 
