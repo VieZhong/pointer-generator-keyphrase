@@ -21,6 +21,7 @@ import random
 import struct
 import csv
 import hashlib
+import numpy as np
 from tensorflow.core.example import example_pb2
 from collections import OrderedDict
 

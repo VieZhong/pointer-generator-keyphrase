@@ -188,7 +188,7 @@ class Batch(object):
       for i, ex in enumerate(example_list):
         self.enc_batch_extend_vocab[i, :] = ex.enc_input_extend_vocab[:]
         if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
-          self.cooccurrence_matrix[i, :ex.enc_len, :ex.enc_len] = ex.cooccurrence_matrix[:][:]
+          self.cooccurrence_matrix[i, :ex.enc_len, :ex.enc_len] = ex.cooccurrence_matrix[:, :]
 
   def init_decoder_seq(self, example_list, hps):
     """Initializes the following:
