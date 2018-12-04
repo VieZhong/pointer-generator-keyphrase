@@ -113,23 +113,18 @@ class BeamSearchDecoder(object):
           output_ids = [int(t) for t in hyp.tokens[1:]]
           decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
 
-          while len(decoded_words_1) and decoded_words_1[0] in [',', '.', '-lrb-']:
+          # Remove the [STOP] token from decoded_words, if necessary
+          while len(decoded_words_1) and decoded_words_1[0] in [',', '.', '-lrb-', data.STOP_DECODING]:
             decoded_words_1 = decoded_words_1[1:]
-          for symbol in [',', '.', '-lrb-']:
+          for symbol in [',', '.', '-lrb-', data.STOP_DECODING]:
             try:
               stop_idx = decoded_words_1.index(symbol) # index of the (first) [STOP] symbol
               decoded_words_1 = decoded_words_1[:stop_idx]
             except ValueError:
               continue
-
           if not len(decoded_words_1) or (len(decoded_words) and decoded_words_1[0] in [words[0] for words in decoded_words]):
             continue
-          # Remove the [STOP] token from decoded_words, if necessary
-          try:
-            fst_stop_idx = decoded_words_1.index(data.STOP_DECODING) # index of the (first) [STOP] symbol
-            decoded_words.append(decoded_words_1[:fst_stop_idx])
-          except ValueError:
-            decoded_words.append(decoded_words_1)
+          decoded_words.append(decoded_words_1)
       decoded_output = ' '.join(flat(decoded_words)) # single string          
 
       # # Extract the output ids from the hypothesis and convert back to words
@@ -176,7 +171,7 @@ class BeamSearchDecoder(object):
         except ValueError: # there is text remaining that doesn't end in "."
           fst_period_idx = len(decoded_words)
         sent = decoded_words[:fst_period_idx+1] # sentence up to and including the period
-        decoded_words = decoded_words[fst_period_idx+1:] # everything else
+        decoded_words = decoded_words[fst_period_idx + 1:] # everything else
         decoded_sents.append(' '.join(sent))
 
     # pyrouge calls a perl script that puts the data into HTML files.
