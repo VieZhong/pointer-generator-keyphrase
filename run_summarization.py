@@ -312,7 +312,7 @@ def main(unused_argv):
   #   raise Exception("The co_occurrence flag should be True when the prev_relation flag is True")
 
   # Make a namedtuple hps, containing the values of the hyperparameters that the model needs
-  hparam_list = ['language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'cov_loss_wt', 'pointer_gen', 'cell_type']
+  hparam_list = ['language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'beam_depth', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'cov_loss_wt', 'pointer_gen', 'cell_type']
   hps_dict = {}
   for key,val in FLAGS.__flags.items(): # for each flag
     if key in hparam_list: # if it's in the list
