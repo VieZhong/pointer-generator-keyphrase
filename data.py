@@ -316,7 +316,7 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[]):
   words_set = list(set(words))
   length = len(words)
   size = len(words_set)
-  matrix = [[0] * size for i in range(size)] # 标准词共现矩阵
+  matrix = np.zeros((size, size), dtype=np.float32) # 标准词共现矩阵
 
   def is_ok(w):
     if w not in PUNCTUATION_MARKS and w not in exclude_words:
@@ -340,7 +340,7 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[]):
     if (i + win_size) > (length - 1):
       break
 
-  result_matrix = [[0] * length for i in range(length)]  
+  result_matrix = np.zeros((length, length), dtype=np.float32)  
   for i, w1 in enumerate(words):
     id1 = words_set.index(w1)
     for j, w2 in enumerate(words):
