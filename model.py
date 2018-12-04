@@ -197,6 +197,7 @@ class SummarizationModel(object):
 
       if self._hps.prev_relation:
         p_r = tf.get_variable("p_r", [1], initializer=tf.constant_initializer(0.2))
+        self._p_r = p_r[0]
         co_matrix = tf.slice(self._cooccurrence_matrix, [0, 0, 0], [-1, attn_len, attn_len])
         
         relation_dists = []
@@ -316,7 +317,7 @@ class SummarizationModel(object):
             tf.summary.scalar('total_loss', self._total_loss)
 
           if hps.prev_relation:
-            tf.summary.scalar('p_r', tf.get_variable("p_r")[0])
+            tf.summary.scalar('p_r', self._p_r)
 
     if hps.mode == "decode":
       # We run decode beam search mode one decoder step at a time
