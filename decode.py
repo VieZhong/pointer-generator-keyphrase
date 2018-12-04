@@ -122,7 +122,7 @@ class BeamSearchDecoder(object):
             except ValueError:
               continue
 
-          if not len(decoded_words_1) or decoded_words_1[0] in [words[0] for words in decoded_words]:
+          if not len(decoded_words_1) or (len(decoded_words) and decoded_words_1[0] in [words[0] for words in decoded_words]):
             continue
           # Remove the [STOP] token from decoded_words, if necessary
           try:
