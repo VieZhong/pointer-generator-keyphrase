@@ -517,7 +517,7 @@ def _mask_and_avg(values, padding_mask):
     return tf.reduce_mean(values_per_ex) # overall average
 
   dec_lens = tf.reduce_sum(padding_mask, axis=1) # shape batch_size. float32
-  tf.cond(
+  return tf.cond(
       tf.less(dec_lens, 1),
       lambda: 0,
       lambda: cal(dec_lens)
