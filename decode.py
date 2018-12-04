@@ -115,7 +115,7 @@ class BeamSearchDecoder(object):
 
           while len(decoded_words_1) and decoded_words_1[0][0] in [',', '.', '-lrb-']:
             decoded_words_1 = decoded_words_1[1:]
-          while symbol in [',', '.', '-lrb-']:
+          for symbol in [',', '.', '-lrb-']:
             try:
               stop_idx = decoded_words_1.index(symbol) # index of the (first) [STOP] symbol
               decoded_words_1 = decoded_words_1[:stop_idx]
