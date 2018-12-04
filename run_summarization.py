@@ -43,6 +43,7 @@ tf.app.flags.DEFINE_boolean('single_pass', False, 'For decode mode only. If True
 # Where to save output
 tf.app.flags.DEFINE_string('log_root', '', 'Root directory for all logging.')
 tf.app.flags.DEFINE_string('exp_name', '', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
+tf.app.flags.DEFINE_string('language', 'english', 'language')
 
 # Encoder and decoder settings
 tf.app.flags.DEFINE_string('cell_type', 'LSTM', 'LSTM or GRU')
@@ -309,7 +310,7 @@ def main(unused_argv):
   #   raise Exception("The co_occurrence flag should be True when the prev_relation flag is True")
 
   # Make a namedtuple hps, containing the values of the hyperparameters that the model needs
-  hparam_list = ['dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'cov_loss_wt', 'pointer_gen', 'cell_type']
+  hparam_list = ['language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'coverage', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'cov_loss_wt', 'pointer_gen', 'cell_type']
   hps_dict = {}
   for key,val in FLAGS.__flags.items(): # for each flag
     if key in hparam_list: # if it's in the list

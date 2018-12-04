@@ -258,8 +258,12 @@ def get_f1_score(ref_words, dec_words, stemmer):
     return 0
 
   num_overlap = 0
-  dec_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in dec_words[:FLAGS.max_keyphrase_num]]
-  ref_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in ref_words[:FLAGS.max_keyphrase_num]]
+  if FLAGS.language == 'english':
+    dec_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in dec_words[:FLAGS.max_keyphrase_num]]
+    ref_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in ref_words[:FLAGS.max_keyphrase_num]]
+  else:
+    dec_stem_words = dec_words[:FLAGS.max_keyphrase_num]
+    ref_stem_words = ref_words[:FLAGS.max_keyphrase_num]
   for d_words in dec_stem_words:
     d_words = d_words.split()
     is_overlap = False
@@ -289,7 +293,7 @@ def f1_score_eval(ref_dir, dec_dir):
   ref_files = os.listdir(ref_dir)
   dec_files = os.listdir(dec_dir)
 
-  stemmer = Stemmer.Stemmer('english')
+  stemmer = Stemmer.Stemmer('english') if FLAGS.language == 'english' else None
 
   f1_score_result = []
   for ref_file in ref_files:

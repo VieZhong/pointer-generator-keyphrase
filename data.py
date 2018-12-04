@@ -33,7 +33,7 @@ UNKNOWN_TOKEN = '[UNK]' # This has a vocab id, which is used to represent out-of
 START_DECODING = '[START]' # This has a vocab id, which is used at the start of every decoder input sequence
 STOP_DECODING = '[STOP]' # This has a vocab id, which is used at the end of untruncated target sequences
 
-PUNCTUATION_MARKS = [",", ".", "?", "!", "-", "'", "\"", "[", "]", "@", "+", "&", "$", ";", ":", "/", "|", "~"， "_"]
+PUNCTUATION_MARKS = [",", ".", "?", "!", "-", "-rrb-", "-lrb-", "-rsb-", "-lsb-", "'", "\"", "[", "]", "@", "+", "&", "$", ";", ":", "/", "|", "#", "~"， "_", "`", "＂", "。", "，", "？", "！", "《", "》", "<", ">", "．", "：", "、", "``", "''", "--", "；", "）", "（"， "(", ")"]
 
 # Note: none of <s>, </s>, [PAD], [UNK], [START], [STOP] should appear in the vocab file.
 
