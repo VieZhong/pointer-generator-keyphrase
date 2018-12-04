@@ -113,6 +113,15 @@ class BeamSearchDecoder(object):
           output_ids = [int(t) for t in hyp.tokens[1:]]
           decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
 
+          while len(decoded_words_1) and decoded_words_1[0][0] in [',', '.', '-lrb-']:
+            decoded_words_1 = decoded_words_1[1:]
+          while symbol in [',', '.', '-lrb-']:
+            try:
+              stop_idx = decoded_words_1.index(symbol) # index of the (first) [STOP] symbol
+              decoded_words_1 = decoded_words_1[:stop_idx]
+            except ValueError:
+              continue
+
           if not len(decoded_words_1) or decoded_words_1[0] in [words[0] for words in decoded_words]:
             continue
           # Remove the [STOP] token from decoded_words, if necessary
