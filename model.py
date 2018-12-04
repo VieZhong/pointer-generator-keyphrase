@@ -284,7 +284,6 @@ class SummarizationModel(object):
         final_dists = vocab_dists
 
 
-
       if hps.mode in ['train', 'eval']:
         # Calculate the loss
         with tf.variable_scope('loss'):
@@ -294,8 +293,8 @@ class SummarizationModel(object):
             loss_per_step = [] # will be list length max_dec_steps containing shape (batch_size)
             batch_nums = tf.range(0, limit=hps.batch_size) # shape (batch_size)
             for dec_step, dist in enumerate(final_dists):
-              targets = self._target_batch[:,dec_step] # The indices of the target words. shape (batch_size)
-              indices = tf.stack( (batch_nums, targets), axis=1) # shape (batch_size, 2)
+              targets = self._target_batch[:, dec_step] # The indices of the target words. shape (batch_size)
+              indices = tf.stack((batch_nums, targets), axis=1) # shape (batch_size, 2)
               gold_probs = tf.gather_nd(dist, indices) # shape (batch_size). prob of correct words on this step
               losses = -tf.log(gold_probs)
               loss_per_step.append(losses)
@@ -315,6 +314,9 @@ class SummarizationModel(object):
               tf.summary.scalar('coverage_loss', self._coverage_loss)
             self._total_loss = self._loss + hps.cov_loss_wt * self._coverage_loss
             tf.summary.scalar('total_loss', self._total_loss)
+
+          if hps.prev_relation:
+            tf.summary.scalar('p_r', tf.get_variable("p_r")[0])
 
     if hps.mode == "decode":
       # We run decode beam search mode one decoder step at a time
