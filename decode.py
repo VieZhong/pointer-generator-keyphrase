@@ -261,28 +261,38 @@ def get_f1_score(ref_words, dec_words, stemmer):
   if FLAGS.language == 'english':
     dec_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in dec_words[:FLAGS.max_keyphrase_num]]
     ref_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in ref_words[:FLAGS.max_keyphrase_num]]
-  else:
-    dec_stem_words = dec_words[:FLAGS.max_keyphrase_num]
-    ref_stem_words = ref_words[:FLAGS.max_keyphrase_num]
-  for d_words in dec_stem_words:
-    d_words = d_words.split()
-    is_overlap = False
-    for r_words in ref_stem_words:
-      r_words = r_words.split()
-      if len(r_words) == len(d_words):
-        is_in = True
-        for i, d_w in enumerate(d_words):
-          # if d_w not in r_words:
-          if d_w != r_words[i]:
-            is_in = False
+    for d_words in dec_stem_words:
+      d_words = d_words.split()
+      is_overlap = False
+      for r_words in ref_stem_words:
+        r_words = r_words.split()
+        if len(r_words) == len(d_words):
+          is_in = True
+          for i, d_w in enumerate(d_words):
+            # if d_w not in r_words:
+            if d_w != r_words[i]:
+              is_in = False
+              break
+          if is_in:
+            is_overlap = True
             break
-        if is_in:
+      if is_overlap:
+        num_overlap = num_overlap + 1
+    if num_overlap < 1:
+      return 0
+  else:
+    dec_stem_words = [''.join(stemmer.stemWords(w.split())) for w in dec_words[:FLAGS.max_keyphrase_num]]
+    ref_stem_words = [''.join(stemmer.stemWords(w.split())) for w in ref_words[:FLAGS.max_keyphrase_num]]
+    for d_words in dec_stem_words:
+      is_overlap = False
+      for r_words in ref_stem_words:
+        if r_words == d_words:
           is_overlap = True
           break
-    if is_overlap:
-      num_overlap = num_overlap + 1
-  if num_overlap < 1:
-    return 0
+      if is_overlap:
+        num_overlap = num_overlap + 1
+    if num_overlap < 1:
+      return 0
   recall = num_overlap / len(ref_stem_words)
   precision = num_overlap / len(dec_stem_words)
   return 2.0 * precision * recall / (precision + recall)
