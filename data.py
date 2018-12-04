@@ -307,7 +307,7 @@ def hashhex(s):
   return h.hexdigest()
 
 # 获取单向词共现矩阵
-def get_cooccurrence_matrix(words, win_size=5, exclude_words=[]):
+def get_cooccurrence_matrix(words, win_size=3, exclude_words=[]):
 
   h = hashhex('-'.join([str(x) for x in words]))
   if h in co_matrix_store:
