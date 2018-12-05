@@ -320,9 +320,7 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[]):
   matrix = np.zeros((size, size), dtype=np.float32) # 标准词共现矩阵
 
   def is_ok(w):
-    if w not in exclude_words:
-      return True
-    return False
+    return False if w in exclude_words else True
 
   def get_match(wds, sets):
     wd_ids = [sets.index(w) for w in wds] 
@@ -350,7 +348,7 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[]):
 
   result_matrix = softmax(result_matrix)
   co_matrix_store[h] = result_matrix
-  
+
   return result_matrix
 
 
