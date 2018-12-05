@@ -183,7 +183,7 @@ class Batch(object):
       if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
         self.cooccurrence_matrix = np.zeros((hps.batch_size, hps.max_enc_steps, hps.max_enc_steps), dtype=np.float32)
       if hps.co_occurrence_i:
-        self.cooccurrence_weight = np.zeros((hps.batch_size, hps.max_enc_steps), dtype=np.float32)
+        self.cooccurrence_weight = np.zeros((hps.batch_size, max_enc_seq_len), dtype=np.float32)
       for i, ex in enumerate(example_list):
         self.enc_batch_extend_vocab[i, :] = ex.enc_input_extend_vocab[:]
         if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
