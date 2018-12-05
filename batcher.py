@@ -293,6 +293,7 @@ class Batcher(object):
     batch = self._batch_queue.get() # get the next Batch
     return batch
 
+
   def fill_example_queue(self):
     """Reads data from file and processes into Examples which are then placed into the example queue."""
 

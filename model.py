@@ -54,7 +54,6 @@ class SummarizationModel(object):
     if hps.mode=="decode" and hps.coverage:
       self.prev_coverage = tf.placeholder(tf.float32, [hps.batch_size, None], name='prev_coverage')
 
-
   def _make_feed_dict(self, batch, just_enc=False):
     """Make a feed dictionary mapping parts of the batch to the appropriate placeholders.
 
@@ -326,7 +325,6 @@ class SummarizationModel(object):
       topk_probs, self._topk_ids = tf.nn.top_k(final_dists, hps.batch_size * hps.beam_depth) # take the k largest probs. note batch_size=beam_size in decode mode
       self._topk_log_probs = tf.log(topk_probs)
 
-
   def _add_train_op(self):
     """Sets self._train_op, the op to run for training."""
     # Take gradients of the trainable variables w.r.t. the loss function to minimize
@@ -348,7 +346,6 @@ class SummarizationModel(object):
       optimizer = tf.train.AdagradOptimizer(self._hps.lr, initial_accumulator_value=self._hps.adagrad_init_acc)
     with tf.device("/gpu:0"):
       self._train_op = optimizer.apply_gradients(zip(grads, tvars), global_step=self.global_step, name='train_step')
-
 
   def build_graph(self):
     """Add the placeholders, model, global step, train_op and summaries to the graph"""
@@ -410,7 +407,6 @@ class SummarizationModel(object):
     else:
       dec_in_state = tf.contrib.rnn.LSTMStateTuple(dec_in_state.c[0], dec_in_state.h[0])
     return enc_states, dec_in_state
-
 
   def decode_onestep(self, sess, batch, latest_tokens, enc_states, dec_init_states, prev_coverage):
     """For beam search decoding. Run the decoder for one step.
