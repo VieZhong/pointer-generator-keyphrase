@@ -321,7 +321,9 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
   matrix = np.zeros((size, size), dtype=np.float32) # 标准词共现矩阵
 
   def is_ok(w):
-    return False if w in exclude_words else True
+    if w in exclude_words:
+      return False
+    return True
 
   def get_match(wds, sets):
     wd_ids = [sets.index(w) for w in wds] 
@@ -369,7 +371,7 @@ def get_stop_word_ids(path, vocab):
 
 def softmax(z):
     assert len(z.shape) < 3
-    
+
     if len(z.shape) == 2:
       s = np.max(z, axis=1)
       s = s[:, np.newaxis] # necessary step to do broadcasting
