@@ -285,8 +285,8 @@ def get_f1_score(ref_words, dec_words, stemmer):
     if num_overlap < 1:
       return 0
   else:
-    dec_stem_words = [''.join(stemmer.stemWords(w.split())) for w in dec_words[:FLAGS.max_keyphrase_num]]
-    ref_stem_words = [''.join(stemmer.stemWords(w.split())) for w in ref_words[:FLAGS.max_keyphrase_num]]
+    dec_stem_words = [''.join(w.split()) for w in dec_words[:FLAGS.max_keyphrase_num]]
+    ref_stem_words = [''.join(w.split()) for w in ref_words[:FLAGS.max_keyphrase_num]]
     for d_words in dec_stem_words:
       is_overlap = False
       for r_words in ref_stem_words:
