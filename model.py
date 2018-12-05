@@ -45,7 +45,8 @@ class SummarizationModel(object):
       self._max_art_oovs = tf.placeholder(tf.int32, [], name='max_art_oovs')
       if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
         self._cooccurrence_matrix = tf.placeholder(tf.float32, [hps.batch_size, None, None], name='cooccurrence_matrix')
-
+      if hps.co_occurrence_i:
+        self._cooccurrence_weight = tf.placeholder(tf.float32, [hps.batch_size, None], name='cooccurrence_weight')
     # decoder part
     self._dec_batch = tf.placeholder(tf.int32, [hps.batch_size, hps.max_dec_steps], name='dec_batch')
     self._target_batch = tf.placeholder(tf.int32, [hps.batch_size, hps.max_dec_steps], name='target_batch')
@@ -70,6 +71,8 @@ class SummarizationModel(object):
       feed_dict[self._max_art_oovs] = batch.max_art_oovs
       if FLAGS.co_occurrence or FLAGS.prev_relation or FLAGS.co_occurrence_h:
         feed_dict[self._cooccurrence_matrix] = batch.cooccurrence_matrix
+      if FLAGS.co_occurrence_i:
+        feed_dict[self._cooccurrence_weight] = batch.cooccurrence_weight
     if not just_enc:
       feed_dict[self._dec_batch] = batch.dec_batch
       feed_dict[self._target_batch] = batch.target_batch
@@ -252,6 +255,9 @@ class SummarizationModel(object):
         emb_enc_inputs = tf.nn.embedding_lookup(embedding, self._enc_batch) # tensor with shape (batch_size, max_enc_steps, emb_size)
         emb_dec_inputs = [tf.nn.embedding_lookup(embedding, x) for x in tf.unstack(self._dec_batch, axis=1)] # list length max_dec_steps containing shape (batch_size, emb_size)
         decoder_input_ids = [x for x in tf.unstack(self._dec_batch, axis=1)] if hps.co_occurrence_h else None
+
+        if hps.co_occurrence_i:
+          emb_enc_inputs = tf.concat([emb_enc_inputs, tf.expand_dims(self._cooccurrence_weight, 1)], 2)
 
       # Add the encoder.
         enc_outputs, fw_st, bw_st = self._add_encoder(emb_enc_inputs, self._enc_lens)
@@ -462,7 +468,8 @@ class SummarizationModel(object):
       to_return['p_gens'] = self.p_gens
       if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
         feed[self._cooccurrence_matrix] = batch.cooccurrence_matrix
-
+      if hps.co_occurrence_i:
+        feed[self._cooccurrence_weight] = batch.cooccurrence_weight
     if self._hps.coverage:
       feed[self.prev_coverage] = np.stack(prev_coverage, axis=0)
       to_return['coverage'] = self.coverage

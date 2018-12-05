@@ -58,6 +58,7 @@ class LastUpdatedOrderedDict(OrderedDict):
         OrderedDict.__setitem__(self, key, value)
 
 co_matrix_store = LastUpdatedOrderedDict(1000)
+co_weight_store = LastUpdatedOrderedDict(1000)
 
 class Vocab(object):
   """Vocabulary class for mapping between words and ids (integers)"""
@@ -308,11 +309,11 @@ def hashhex(s):
   return h.hexdigest()
 
 # 获取单向词共现矩阵
-def get_cooccurrence_matrix(words, win_size=3, exclude_words=[]):
+def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=False):
 
   h = hashhex('-'.join([str(x) for x in words]))
   if h in co_matrix_store:
-    return co_matrix_store[h]
+    return co_matrix_store[h], co_weight_store[h]
 
   words_set = list(set(words))
   length = len(words)
@@ -346,10 +347,12 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[]):
       id2 = words_set.index(w2)
       result_matrix[i][j] = matrix[id1][id2]
 
+  result_weight = softmax(np.sum(result_matrix, axis=1)) if need_weight else None
   result_matrix = softmax(result_matrix)
   co_matrix_store[h] = result_matrix
+  co_weight_store[h] = result_weight
 
-  return result_matrix
+  return result_matrix, result_weight
 
 
 def get_stop_word_ids(path, vocab):
@@ -365,11 +368,19 @@ def get_stop_word_ids(path, vocab):
 
 
 def softmax(z):
-    assert len(z.shape) == 2
-    s = np.max(z, axis=1)
-    s = s[:, np.newaxis] # necessary step to do broadcasting
-    e_x = np.exp(z - s)
-    div = np.sum(e_x, axis=1)
-    div = div[:, np.newaxis] # dito
-    return e_x / div
+    assert len(z.shape) < 3
+    
+    if len(z.shape) == 2:
+      s = np.max(z, axis=1)
+      s = s[:, np.newaxis] # necessary step to do broadcasting
+      e_x = np.exp(z - s)
+      div = np.sum(e_x, axis=1)
+      div = div[:, np.newaxis] # dito
+      return e_x / div
+
+    z = z - np.max(z)
+    exp_x = np.exp(z)
+    softmax_x = exp_x / np.sum(exp_x)
+    return softmax_x
+
 
