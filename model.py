@@ -257,7 +257,7 @@ class SummarizationModel(object):
         decoder_input_ids = [x for x in tf.unstack(self._dec_batch, axis=1)] if hps.co_occurrence_h else None
 
         if hps.co_occurrence_i:
-          emb_enc_inputs = tf.reshape(tf.concat([emb_enc_inputs, tf.expand_dims(self._cooccurrence_weight, 1)], 2), [hps.batch_size, -1, hps.emb_dim + 1])
+          emb_enc_inputs = tf.reshape(tf.concat([emb_enc_inputs, tf.expand_dims(self._cooccurrence_weight, 2)], 2), [hps.batch_size, -1, hps.emb_dim + 1])
 
       # Add the encoder.
         enc_outputs, fw_st, bw_st = self._add_encoder(emb_enc_inputs, self._enc_lens)
