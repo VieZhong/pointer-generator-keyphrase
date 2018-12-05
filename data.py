@@ -320,7 +320,7 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[]):
   matrix = np.zeros((size, size), dtype=np.float32) # 标准词共现矩阵
 
   def is_ok(w):
-    if w not in PUNCTUATION_MARKS and w not in exclude_words:
+    if w not in exclude_words:
       return True
     return False
 
@@ -347,7 +347,7 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[]):
     for j, w2 in enumerate(words):
       id2 = words_set.index(w2)
       result_matrix[i][j] = matrix[id1][id2]
-      
+
   result_matrix = softmax(result_matrix)
   co_matrix_store[h] = result_matrix
   
@@ -361,8 +361,9 @@ def get_stop_word_ids(path, vocab):
       w = line.strip()
       if w:
         stop_words.append(w)
-  stop_word_ids = [vocab.word2id(w) for w in stop_words]
-  return stop_word_ids
+  stop_word_ids = [vocab.word2id(w) for w in PUNCTUATION_MARKS]
+  stop_word_ids.extend([vocab.word2id(w) for w in stop_words])
+  return list(set(stop_word_ids))
 
 
 def softmax(z):
