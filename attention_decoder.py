@@ -143,7 +143,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
             coverage = tf.expand_dims(tf.expand_dims(attn_dist, 2), 2) # initialize coverage
 
         # Calculate the context vector from attn_dist and encoder_states
-        if not FLAGS.co_occurrence_h or not input_ids: 
+        if not FLAGS.co_occurrence_h or input_ids == None: 
           context_vector = math_ops.reduce_sum(array_ops.reshape(attn_dist, [batch_size, -1, 1, 1]) * encoder_states, [1, 2]) # shape (batch_size, attn_size).
         else:
           p_oc = tf.get_variable("p_oc", [1], initializer=tf.constant_initializer(0.2))
