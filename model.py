@@ -179,8 +179,8 @@ class SummarizationModel(object):
       # Multiply vocab dists by p_gen and attention dists by (1-p_gen)
       vocab_dists = [p_gen * dist for (p_gen, dist) in zip(self.p_gens, vocab_dists)]
       if self._hps.prev_relation:
-        p_r = [0.2]
-        attn_dists = [(1 - p_gen) * (1 - p_r[0]) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
+        p_r = 0.2
+        attn_dists = [(1 - p_gen) * (1 - p_r) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
       else:
         attn_dists = [(1 - p_gen) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
 
