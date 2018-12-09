@@ -115,7 +115,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
         if use_coverage and coverage is not None: # non-first step of coverage
 
           # Multiply coverage vector by w_c to get coverage_features.
-          if coverage_weight:
+          if coverage_weight is not None:
             co_weight = tf.expand_dims(tf.expand_dims(coverage_weight, 2), 3)
             coverage = co_weight * coverage
           coverage_features = nn_ops.conv2d(coverage, w_c, [1, 1, 1, 1], "SAME") # c has shape (batch_size, attn_length, 1, attention_vec_size)
