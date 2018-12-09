@@ -26,7 +26,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # Note: this function is based on tf.contrib.legacy_seq2seq_attention_decoder, which is now outdated.
 # In the future, it would make more sense to write variants on the attention mechanism using the new seq2seq library for tensorflow 1.0: https://www.tensorflow.org/api_guides/python/contrib.seq2seq#Attention
-def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None):
+def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None, coverage_weight=None):
   """
   Args:
     decoder_inputs: A list of 2D Tensors [batch_size x input_size].
@@ -115,6 +115,9 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
         if use_coverage and coverage is not None: # non-first step of coverage
 
           # Multiply coverage vector by w_c to get coverage_features.
+          if coverage_weight:
+            co_weight = tf.expand_dims(tf.expand_dims(coverage_weight, 2), 3)
+            coverage = co_weight * coverage
           coverage_features = nn_ops.conv2d(coverage, w_c, [1, 1, 1, 1], "SAME") # c has shape (batch_size, attn_length, 1, attention_vec_size)
 
           sum_features = encoder_features + decoder_features + coverage_features

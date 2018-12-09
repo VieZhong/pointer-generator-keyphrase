@@ -45,7 +45,7 @@ class SummarizationModel(object):
       self._max_art_oovs = tf.placeholder(tf.int32, [], name='max_art_oovs')
       if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
         self._cooccurrence_matrix = tf.placeholder(tf.float32, [hps.batch_size, None, None], name='cooccurrence_matrix')
-      if hps.co_occurrence_i:
+      if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted):
         self._cooccurrence_weight = tf.placeholder(tf.float32, [hps.batch_size, None], name='cooccurrence_weight')
     # decoder part
     self._dec_batch = tf.placeholder(tf.int32, [hps.batch_size, hps.max_dec_steps], name='dec_batch')
@@ -71,7 +71,7 @@ class SummarizationModel(object):
       feed_dict[self._max_art_oovs] = batch.max_art_oovs
       if FLAGS.co_occurrence or FLAGS.prev_relation or FLAGS.co_occurrence_h:
         feed_dict[self._cooccurrence_matrix] = batch.cooccurrence_matrix
-      if FLAGS.co_occurrence_i:
+      if FLAGS.co_occurrence_i or (FLAGS.coverage and FLAGS.coverage_weighted):
         feed_dict[self._cooccurrence_weight] = batch.cooccurrence_weight
     if not just_enc:
       feed_dict[self._dec_batch] = batch.dec_batch
@@ -161,7 +161,8 @@ class SummarizationModel(object):
     prev_coverage = self.prev_coverage if hps.mode=="decode" and hps.coverage else None # In decode mode, we run attention_decoder one step at a time and so need to pass in the previous step's coverage vector each time
     co_matrix = self._cooccurrence_matrix if hps.co_occurrence or hps.co_occurrence_h else None
     enc_batch_extend_vocab = self._enc_batch_extend_vocab if hps.co_occurrence_h else None
-    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids)
+    co_weight = self._cooccurrence_weight if hps.coverage and hps.coverage_weighted else None
+    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, coverage_weight=co_weight)
 
     return outputs, out_state, attn_dists, p_gens, coverage
 
@@ -472,7 +473,7 @@ class SummarizationModel(object):
       to_return['p_gens'] = self.p_gens
       if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
         feed[self._cooccurrence_matrix] = batch.cooccurrence_matrix
-      if hps.co_occurrence_i:
+      if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted):
         feed[self._cooccurrence_weight] = batch.cooccurrence_weight
     if self._hps.coverage:
       feed[self.prev_coverage] = np.stack(prev_coverage, axis=0)
