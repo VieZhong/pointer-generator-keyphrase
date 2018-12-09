@@ -339,7 +339,7 @@ class Batcher(object):
         # Get bucketing_cache_size-many batches of Examples into a list, then sort
         inputs = []
         range_num = self._hps.batch_size * self._bucketing_cache_size * self._hps.max_keyphrase_num
-        if self._hps.co_occurrence or self._hps.prev_relation or self._hps.co_occurrence_h or self._hps.co_occurrence_i:
+        if self._hps.co_occurrence or self._hps.prev_relation or self._hps.co_occurrence_h or self._hps.co_occurrence_i or (self._hps.coverage and self._hps.coverage_weighted):
           range_num = self._hps.batch_size * 16
         for _ in range(range_num):
           inputs.append(self._example_queue.get())
