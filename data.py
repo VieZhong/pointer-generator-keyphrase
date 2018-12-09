@@ -349,6 +349,9 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
 
   result_weight = softmax(np.sum(result_matrix, axis=1)) if need_weight else None
   result_matrix = softmax(result_matrix)
+  for i, w1 in enumerate(words):
+    if not is_ok(w1):
+      result_matrix[i] = np.zeros((length), dtype=np.float32)
   co_matrix_store[h] = result_matrix
   co_weight_store[h] = result_weight
 
