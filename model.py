@@ -216,7 +216,7 @@ class SummarizationModel(object):
           relation_dists.append(single_relation_dists)
 
         relation_dists_projected = [tf.scatter_nd(indices, (1 - p_gen) * p_r * relation_dist, shape) for (relation_dist, p_gen) in zip(relation_dists, self.p_gens)]
-        final_dists = [vocab_dist + (1 - p_r) * copy_dist + relation_dist for (vocab_dist, copy_dist, relation_dist) in zip(vocab_dists_extended, attn_dists_projected, relation_dists_projected)]
+        final_dists = [vocab_dist + (1.0 - p_r[0]) * copy_dist + relation_dist for (vocab_dist, copy_dist, relation_dist) in zip(vocab_dists_extended, attn_dists_projected, relation_dists_projected)]
       else:
         # Add the vocab distributions and the copy distributions together to get the final distributions
         # final_dists is a list length max_dec_steps; each entry is a tensor shape (batch_size, extended_vsize) giving the final distribution for that decoder timestep
