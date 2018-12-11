@@ -140,7 +140,7 @@ class SummarizationModel(object):
         new_h = tf.nn.relu(tf.matmul(old_h, w_reduce_h) + bias_reduce_h) # Get new state from old state
         return tf.contrib.rnn.LSTMStateTuple(new_c, new_h) # Return new cell and state
 
-  def _add_decoder(self, inputs, decoder_input_ids):
+  def _add_decoder(self, inputs, decoder_input_ids, emb_enc_inputs):
     """Add attention decoder to the graph. In train or eval mode, you call this once to get output on ALL steps. In decode (beam search) mode, you call this once for EACH decoder step.
 
     Args:
@@ -165,7 +165,8 @@ class SummarizationModel(object):
     enc_batch_extend_vocab = self._enc_batch_extend_vocab if hps.co_occurrence_h else None
     co_weight = self._cooccurrence_weight if hps.coverage and hps.coverage_weighted else None
     attn_weight = self._cooccurrence_weight if hps.attention_weighted else None
-    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, coverage_weight=co_weight, attention_weight=attn_weight)
+
+    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, coverage_weight=co_weight, attention_weight=attn_weight, emb_enc_inputs=emb_enc_inputs)
 
     return outputs, out_state, attn_dists, p_gens, coverage
 
@@ -275,7 +276,7 @@ class SummarizationModel(object):
 
       # Add the decoder.
       with tf.variable_scope('decoder'):
-        decoder_outputs, self._dec_out_state, self.attn_dists, self.p_gens, self.coverage = self._add_decoder(emb_dec_inputs, decoder_input_ids)
+        decoder_outputs, self._dec_out_state, self.attn_dists, self.p_gens, self.coverage = self._add_decoder(emb_dec_inputs, decoder_input_ids, emb_enc_inputs=(emb_enc_inputs if hps.target_siding_bridge else None))
 
       # Add the output projection to obtain the vocabulary distribution
       with tf.variable_scope('output_projection'):

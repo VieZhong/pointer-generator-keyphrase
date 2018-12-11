@@ -26,7 +26,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # Note: this function is based on tf.contrib.legacy_seq2seq_attention_decoder, which is now outdated.
 # In the future, it would make more sense to write variants on the attention mechanism using the new seq2seq library for tensorflow 1.0: https://www.tensorflow.org/api_guides/python/contrib.seq2seq#Attention
-def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None, coverage_weight=None, attention_weight=None):
+def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None, coverage_weight=None, attention_weight=None, emb_enc_inputs=None):
   """
   Args:
     decoder_inputs: A list of 2D Tensors [batch_size x input_size].
@@ -218,7 +218,11 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       # Concatenate the cell_output (= decoder state) and the context vector, and pass them through a linear layer
       # This is V[s_t, h*_t] + b in the paper
       with variable_scope.variable_scope("AttnOutputProjection"):
-        output = linear([cell_output] + [context_vector], cell.output_size, True)
+        if FLAGS.target_siding_bridge:
+          max_prop_input = tf.gather(emb_enc_inputs, tf.arg_max(attn_dist, 1))
+          output = linear([cell_output] + [context_vector] + [max_prop_input], cell.output_size, True)
+        else:
+          output = linear([cell_output] + [context_vector], cell.output_size, True)
       outputs.append(output)
 
     # If using coverage, reshape it
