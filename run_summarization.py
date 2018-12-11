@@ -81,6 +81,7 @@ tf.app.flags.DEFINE_boolean('co_occurrence', False, 'Whether to use co_occurrenc
 tf.app.flags.DEFINE_boolean('co_occurrence_h', False, 'Whether to use co_occurrence_h factor.')
 tf.app.flags.DEFINE_boolean('co_occurrence_i', False, 'Whether to concat co_occurrence matrix to encoder embeddings.')
 tf.app.flags.DEFINE_boolean('prev_relation', False, 'Whether to use the previous output word to predict the next output word.')
+tf.app.flags.DEFINE_boolean('source_siding_bridge', False, 'Whether to use source siding bridging model.')
 
 # Utility flags, for restoring and changing checkpoints
 tf.app.flags.DEFINE_boolean('convert_to_coverage_model', False, 'Convert a non-coverage model to a coverage model. Turn this on and run in train mode. Your current training model will be copied to a new version (same name with _cov_init appended) that will be ready to run with coverage flag turned on, for the coverage training stage.')
@@ -315,7 +316,7 @@ def main(unused_argv):
   #   raise Exception("The co_occurrence flag should be True when the prev_relation flag is True")
 
   # Make a namedtuple hps, containing the values of the hyperparameters that the model needs
-  hparam_list = ['language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'beam_depth', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'attention_weighted', 'coverage', 'coverage_weighted', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'co_occurrence_i', 'cov_loss_wt', 'pointer_gen', 'cell_type']
+  hparam_list = ['source_siding_bridge', 'language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'beam_depth', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'attention_weighted', 'coverage', 'coverage_weighted', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'co_occurrence_i', 'cov_loss_wt', 'pointer_gen', 'cell_type']
   hps_dict = {}
   for key,val in FLAGS.__flags.items(): # for each flag
     if key in hparam_list: # if it's in the list

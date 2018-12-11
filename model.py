@@ -105,6 +105,8 @@ class SummarizationModel(object):
 
       (encoder_outputs, (fw_st, bw_st)) = tf.nn.bidirectional_dynamic_rnn(cell_fw, cell_bw, encoder_inputs, dtype=tf.float32, sequence_length=seq_len, swap_memory=True)
       encoder_outputs = tf.concat(axis=2, values=encoder_outputs) # concatenate the forwards and backwards states
+      if self._hps.source_siding_bridge:
+        encoder_outputs = tf.concat(axis=2, values=[encoder_outputs, encoder_inputs])
       return encoder_outputs, fw_st, bw_st
 
   def _reduce_states(self, fw_st, bw_st):
