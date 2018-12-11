@@ -219,7 +219,10 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       # This is V[s_t, h*_t] + b in the paper
       with variable_scope.variable_scope("AttnOutputProjection"):
         if FLAGS.target_siding_bridge:
-          max_prop_input = tf.gather(emb_enc_inputs, tf.arg_max(attn_dist, 1))
+          max_attn_index = tf.expand_dims(tf.arg_max(attn_dist, 1), 1)
+          batch_nums = tf.expand_dims(tf.range(0, limit=FLAGS.batch_size), 1) # shape (batch_size, 1)
+          max_attn_index = tf.stack((batch_nums, max_attn_index), axis=2)
+          max_prop_input = tf.reshape(tf.gather_nd(emb_enc_inputs, max_attn_index), [-1, tf.shape(emb_enc_inputs)[-1]])
           output = linear([cell_output] + [context_vector] + [max_prop_input], cell.output_size, True)
         else:
           output = linear([cell_output] + [context_vector], cell.output_size, True)
