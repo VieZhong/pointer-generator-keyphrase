@@ -22,6 +22,7 @@ import struct
 import csv
 import hashlib
 import numpy as np
+import tensorflow as tf
 from tensorflow.core.example import example_pb2
 from collections import OrderedDict
 
@@ -59,6 +60,19 @@ class LastUpdatedOrderedDict(OrderedDict):
 
 co_matrix_store = LastUpdatedOrderedDict(1000)
 co_weight_store = LastUpdatedOrderedDict(1000)
+
+matrix_graph = tf.Graph()
+with matrix_graph.as_default():
+  matrix_placeholder = tf.placeholder(tf.float32, [None, None], name='co_matrix')
+  d = 0.85
+  init_weight = tf.tile(tf.div([1.0], tf.to_float(tf.shape(matrix_placeholder)[0])), [tf.shape(matrix_placeholder)[0]])
+  sum_matrix = tf.expand_dims(tf.reduce_sum(matrix_placeholder, 1), 1)
+  e = tf.matrix_transpose(tf.div(matrix_placeholder, sum_matrix))
+
+  weight = init_weight
+  for i in range(1000):
+    weight_matrix = tf.tile(tf.expand_dims(weight, 0), [tf.shape(matrix_placeholder)[0], 1])
+    weight = (1 - d) * init_weight + d * tf.reduce_sum(tf.multiply(e, weight_matrix), 1)
 
 class Vocab(object):
   """Vocabulary class for mapping between words and ids (integers)"""
@@ -315,11 +329,6 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
   if h in co_matrix_store:
     return co_matrix_store[h], co_weight_store[h]
 
-  words_set = list(set(words))
-  length = len(words)
-  size = len(words_set)
-  matrix = np.zeros((size, size), dtype=np.float32) # 标准词共现矩阵
-
   def is_ok(w):
     return False if w in exclude_words else True
 
@@ -331,27 +340,44 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
         result.append([wd_ids[i], wd_ids[j]])
     return result
 
-  for i in range(length):
-    match = get_match(words[i: i + win_size], words_set)
-    for m in match:
-      if is_ok(words_set[m[0]]) and is_ok(words_set[m[1]]): 
-        matrix[m[0]][m[1]] = matrix[m[0]][m[1]] + 1
-        # matrix[m[1]][m[0]] = matrix[m[1]][m[0]] + 1
-    if (i + win_size) > (length - 1):
-      break
+  def get_matrix(words):
 
-  result_matrix = np.zeros((length, length), dtype=np.float32)  
-  for i, w1 in enumerate(words):
-    id1 = words_set.index(w1)
-    for j, w2 in enumerate(words):
-      id2 = words_set.index(w2)
-      result_matrix[i][j] = matrix[id1][id2]
+    words_set = list(set(words))
+    length = len(words)
+    size = len(words_set)
+    matrix = np.zeros((size, size), dtype=np.float32) # 标准词共现矩阵
 
-  result_weight = softmax(np.sum(result_matrix, axis=1)) if need_weight else None
-  result_matrix = softmax(result_matrix)
-  for i, w1 in enumerate(words):
-    if not is_ok(w1):
-      result_matrix[i] = np.zeros((length), dtype=np.float32)
+    for i in range(length):
+      match = get_match(words[i: i + win_size], words_set)
+      for m in match:
+        if is_ok(words_set[m[0]]) and is_ok(words_set[m[1]]): 
+          matrix[m[0]][m[1]] = matrix[m[0]][m[1]] + 1
+          # matrix[m[1]][m[0]] = matrix[m[1]][m[0]] + 1
+      if (i + win_size) > (length - 1):
+        break
+      
+    result_matrix = np.zeros((length, length), dtype=np.float32)  
+    result_weight = None
+    if need_weight:
+      result_weight = np.zeros((length), dtype=np.float32)
+      result_weight_set = get_weight_from_matrix(matrix)
+    for i, w1 in enumerate(words):
+      id1 = words_set.index(w1)
+      if need_weight:
+        result_weight[i] = result_weight_set[id1]
+      for j, w2 in enumerate(words):
+        id2 = words_set.index(w2)
+        result_matrix[i][j] = matrix[id1][id2]
+
+    result_matrix = softmax(result_matrix)
+    for i, w1 in enumerate(words):
+      if not is_ok(w1):
+        result_matrix[i] = np.zeros((length), dtype=np.float32)
+
+    return result_matrix, result_weight
+
+  result_matrix, result_weight = get_matrix(words)
+
   co_matrix_store[h] = result_matrix
   co_weight_store[h] = result_weight
 
@@ -387,3 +413,6 @@ def softmax(z):
     return softmax_x
 
 
+def get_weight_from_matrix(matrix):
+  with tf.Session(graph=matrix_graph) as sess:
+    return sess.run(weight, {matrix_placeholder: matrix})

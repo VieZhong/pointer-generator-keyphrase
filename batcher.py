@@ -348,7 +348,7 @@ class Batcher(object):
         # Group the sorted Examples into batches, optionally shuffle the batches, and place in the batch queue.
         batches = []
         for i in range(0, len(inputs), self._hps.batch_size):
-          batches.append(inputs[i:i + self._hps.batch_size])
+          batches.append(inputs[i: i + self._hps.batch_size])
         if not self._single_pass:
           shuffle(batches)
         for b in batches:  # each b is a list of Example objects
