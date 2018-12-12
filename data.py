@@ -62,7 +62,9 @@ co_matrix_store = LastUpdatedOrderedDict(1000)
 co_weight_store = LastUpdatedOrderedDict(1000)
 
 matrix_graph = tf.Graph()
+
 with matrix_graph.as_default():
+
   matrix_placeholder = tf.placeholder(tf.float32, [None, None], name='co_matrix')
   d = 0.85
   init_weight = tf.tile(tf.div([1.0], tf.to_float(tf.shape(matrix_placeholder)[0])), [tf.shape(matrix_placeholder)[0]])
@@ -349,10 +351,8 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
 
     for i in range(length):
       match = get_match(words[i: i + win_size], words_set)
-      for m in match:
-        if is_ok(words_set[m[0]]) and is_ok(words_set[m[1]]): 
-          matrix[m[0]][m[1]] = matrix[m[0]][m[1]] + 1
-          # matrix[m[1]][m[0]] = matrix[m[1]][m[0]] + 1
+      for m in match: 
+        matrix[m[0]][m[1]] = matrix[m[0]][m[1]] + 1
       if (i + win_size) > (length - 1):
         break
       
@@ -362,18 +362,23 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
       result_weight = np.zeros((length), dtype=np.float32)
       result_weight_set = get_weight_from_matrix(matrix)
     for i, w1 in enumerate(words):
-      id1 = words_set.index(w1)
-      if need_weight:
-        result_weight[i] = result_weight_set[id1]
-      for j, w2 in enumerate(words):
-        id2 = words_set.index(w2)
-        result_matrix[i][j] = matrix[id1][id2]
+      if is_ok(w1):
+        id1 = words_set.index(w1)
+        if need_weight:
+          result_weight[i] = result_weight_set[id1]
+        for j, w2 in enumerate(words):
+          if is_ok(w2):
+            id2 = words_set.index(w2)
+            result_matrix[i][j] = matrix[id1][id2]
 
     result_matrix = softmax(result_matrix)
     for i, w1 in enumerate(words):
       if not is_ok(w1):
         result_matrix[i] = np.zeros((length), dtype=np.float32)
 
+    if need_weight:
+      result_weight = softmax(result_weight)
+      
     return result_matrix, result_weight
 
   result_matrix, result_weight = get_matrix(words)
