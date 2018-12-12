@@ -79,7 +79,7 @@ with matrix_graph.as_default():
   e = tf.matrix_transpose(tf.div(matrix_placeholder, sum_matrix))
 
   weight = init_weight
-  for i in range(1000):
+  for i in range(100):
     weight_matrix = tf.tile(tf.expand_dims(weight, 0), [length, 1])
     weight = (1 - d) * init_weight + d * tf.reduce_sum(tf.multiply(e, weight_matrix), 1)
 
