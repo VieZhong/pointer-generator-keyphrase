@@ -65,15 +65,21 @@ matrix_graph = tf.Graph()
 
 with matrix_graph.as_default():
 
+  def _replace_zero(x):
+    return tf.cond(tf.less(x, 1.0), lambda: 1.0, lambda: x)
+
   matrix_placeholder = tf.placeholder(tf.float32, [None, None], name='co_matrix')
   d = 0.85
-  init_weight = tf.tile(tf.div([1.0], tf.to_float(tf.shape(matrix_placeholder)[0])), [tf.shape(matrix_placeholder)[0]])
-  sum_matrix = tf.expand_dims(tf.reduce_sum(matrix_placeholder, 1), 1)
+  length = tf.shape(matrix_placeholder)[0]
+  init_weight = tf.tile(tf.div([1.0], tf.to_float(length)), [length])
+  sum_matrix = tf.reduce_sum(matrix_placeholder, 1)
+  sum_matrix = tf.map_fn(_replace_zero, sum_matrix)
+  sum_matrix = tf.expand_dims(sum_matrix, 1)
   e = tf.matrix_transpose(tf.div(matrix_placeholder, sum_matrix))
 
   weight = init_weight
   for i in range(1000):
-    weight_matrix = tf.tile(tf.expand_dims(weight, 0), [tf.shape(matrix_placeholder)[0], 1])
+    weight_matrix = tf.tile(tf.expand_dims(weight, 0), [length, 1])
     weight = (1 - d) * init_weight + d * tf.reduce_sum(tf.multiply(e, weight_matrix), 1)
 
 class Vocab(object):
@@ -378,7 +384,7 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
 
     if need_weight:
       result_weight = softmax(result_weight)
-      
+
     return result_matrix, result_weight
 
   result_matrix, result_weight = get_matrix(words)
