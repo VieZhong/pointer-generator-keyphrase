@@ -21,6 +21,7 @@ import random
 import struct
 import csv
 import hashlib
+import util
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.example import example_pb2
@@ -425,5 +426,5 @@ def softmax(z):
 
 
 def get_weight_from_matrix(matrix):
-  with tf.Session(graph=matrix_graph) as sess:
+  with tf.Session(graph=matrix_graph, config=util.get_config()) as sess:
     return sess.run(weight, {matrix_placeholder: matrix})
