@@ -302,7 +302,7 @@ def main(unused_argv):
 
   vocab = Vocab(FLAGS.vocab_path, FLAGS.vocab_size) # create a vocabulary
 
-  stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab) if FLAGS.pointer_gen and (FLAGS.co_occurrence or FLAGS.prev_relation or FLAGS.co_occurrence_h or FLAGS.co_occurrence_i or (FLAGS.coverage and FLAGS.coverage_weighted)) or FLAGS.attention_weighted else None
+  stop_word_ids = get_stop_word_ids(FLAGS.stop_words_path, vocab) if FLAGS.pointer_gen and (FLAGS.co_occurrence or FLAGS.prev_relation or FLAGS.co_occurrence_h or FLAGS.co_occurrence_i or (FLAGS.coverage and FLAGS.coverage_weighted)) or FLAGS.attention_weighted or FLAGS.markov_attention else None
 
   # If in decode mode, set batch_size = beam_size
   # Reason: in decode mode, we decode one example at a time.
