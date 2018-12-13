@@ -482,6 +482,8 @@ class SummarizationModel(object):
     if self._hps.coverage:
       feed[self.prev_coverage] = np.stack(prev_coverage, axis=0)
       to_return['coverage'] = self.coverage
+    if hps.target_siding_bridge:
+      feed_dict[self._enc_batch] = batch.enc_batch
 
     results = sess.run(to_return, feed_dict=feed) # run the decoder step
 
