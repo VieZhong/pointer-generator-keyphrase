@@ -351,16 +351,18 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
 
   def get_matrix(words):
 
-    words_set = list(set(words))
     length = len(words)
+    words_no_stop = [x for x in words if is_ok(x)]
+    length_no_stop = len(words_no_stop)
+    words_set = list(set(words_no_stop))
     size = len(words_set)
     matrix = np.zeros((size, size), dtype=np.float32) # 标准词共现矩阵
 
-    for i in range(length):
-      match = get_match(words[i: i + win_size], words_set)
+    for i in range(length_no_stop):
+      match = get_match(words_no_stop[i: i + win_size], words_set)
       for m in match: 
         matrix[m[0]][m[1]] = matrix[m[0]][m[1]] + 1
-      if (i + win_size) > (length - 1):
+      if (i + win_size) > (length_no_stop - 1):
         break
       
     result_matrix = np.zeros((length, length), dtype=np.float32)  
@@ -383,8 +385,8 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
       if not is_ok(w1):
         result_matrix[i] = np.zeros((length), dtype=np.float32)
 
-    if need_weight:
-      result_weight = softmax(result_weight)
+    # if need_weight:
+    #   result_weight = softmax(result_weight)
 
     return result_matrix, result_weight
 
