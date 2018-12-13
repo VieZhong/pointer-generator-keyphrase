@@ -43,10 +43,12 @@ class SummarizationModel(object):
     if hps.pointer_gen:
       self._enc_batch_extend_vocab = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch_extend_vocab')
       self._max_art_oovs = tf.placeholder(tf.int32, [], name='max_art_oovs')
-      if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
+      if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h or hps.markov_attention:
         self._cooccurrence_matrix = tf.placeholder(tf.float32, [hps.batch_size, None, None], name='cooccurrence_matrix')
-      if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted:
+      if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention:
         self._cooccurrence_weight = tf.placeholder(tf.float32, [hps.batch_size, None], name='cooccurrence_weight')
+      if hps.mode == "decode" and hps.markov_attention:
+        self._prev_attention_dist = tf.placeholder(tf.float32, [hps.batch_size, None], name='prev_attention_dist')
     # decoder part
     self._dec_batch = tf.placeholder(tf.int32, [hps.batch_size, hps.max_dec_steps], name='dec_batch')
     self._target_batch = tf.placeholder(tf.int32, [hps.batch_size, hps.max_dec_steps], name='target_batch')
@@ -69,9 +71,9 @@ class SummarizationModel(object):
     if FLAGS.pointer_gen:
       feed_dict[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed_dict[self._max_art_oovs] = batch.max_art_oovs
-      if FLAGS.co_occurrence or FLAGS.prev_relation or FLAGS.co_occurrence_h:
+      if FLAGS.co_occurrence or FLAGS.prev_relation or FLAGS.co_occurrence_h or FLAGS.markov_attention:
         feed_dict[self._cooccurrence_matrix] = batch.cooccurrence_matrix
-      if FLAGS.co_occurrence_i or (FLAGS.coverage and FLAGS.coverage_weighted) or FLAGS.attention_weighted:
+      if FLAGS.co_occurrence_i or (FLAGS.coverage and FLAGS.coverage_weighted) or FLAGS.attention_weighted or FLAGS.markov_attention:
         feed_dict[self._cooccurrence_weight] = batch.cooccurrence_weight
     if not just_enc:
       feed_dict[self._dec_batch] = batch.dec_batch
@@ -170,19 +172,35 @@ class SummarizationModel(object):
 
     return outputs, out_state, attn_dists, p_gens, coverage
 
-  def _calc_final_dist(self, vocab_dists, attn_dists):
+  def _calc_final_dist(self, vocab_dists, attn_dists, init_attn=None):
     """Calculate the final distribution, for the pointer-generator model
 
     Args:
       vocab_dists: The vocabulary distributions. List length max_dec_steps of (batch_size, vsize) arrays. The words are in the order they appear in the vocabulary file.
       attn_dists: The attention distributions. List length max_dec_steps of (batch_size, attn_len) arrays
+      init_attn: The textrank distributions. shape (batch_size, attn_len)
 
     Returns:
       final_dists: The final distributions. List length max_dec_steps of (batch_size, extended_vsize) arrays.
     """
     with tf.variable_scope('final_distribution'):
+      
+      attn_len = tf.shape(self._enc_batch_extend_vocab)[1] # number of states we attend over
+      if self._hps.prev_relation or self._hps.markov_attention:
+        co_matrix = tf.slice(self._cooccurrence_matrix, [0, 0, 0], [-1, attn_len, attn_len])
+
       # Multiply vocab dists by p_gen and attention dists by (1-p_gen)
       vocab_dists = [p_gen * dist for (p_gen, dist) in zip(self.p_gens, vocab_dists)]
+
+      if self._hps.markov_attention:
+        mark_dists = []
+        for i in range(self._hps.max_dec_steps):
+          prev_attn = init_attn if i == 0 else attn_dists[i - 1]
+          prev_attn_dist = tf.tile(tf.expand_dims(prev_attn, 1), [1, attn_len, 1])
+          mark_dist = tf.reduce_sum(tf.multiply(tf.matrix_transpose(co_matrix), prev_attn_dist), 2)
+          mark_dists.append(mark_dist)
+        attn_dists = [dist1 + dist2 for (dist1, dist2) in zip(mark_dists, attn_dists)]
+
       if self._hps.prev_relation:
         p_r = 0.2
         attn_dists = [(1 - p_gen) * (1 - p_r) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
@@ -200,7 +218,6 @@ class SummarizationModel(object):
       # This is fiddly; we use tf.scatter_nd to do the projection
       batch_nums = tf.range(0, limit=self._hps.batch_size) # shape (batch_size)
       batch_nums = tf.expand_dims(batch_nums, 1) # shape (batch_size, 1)
-      attn_len = tf.shape(self._enc_batch_extend_vocab)[1] # number of states we attend over
       batch_nums = tf.tile(batch_nums, [1, attn_len]) # shape (batch_size, attn_len)
       indices = tf.stack( (batch_nums, self._enc_batch_extend_vocab), axis=2) # shape (batch_size, enc_t, 2)
       shape = [self._hps.batch_size, extended_vsize]
@@ -208,9 +225,7 @@ class SummarizationModel(object):
 
       if self._hps.prev_relation:
         # p_r = tf.get_variable("p_r", [1], initializer=tf.constant_initializer(0.2))
-        # self._p_r = p_r[0]
-        co_matrix = tf.slice(self._cooccurrence_matrix, [0, 0, 0], [-1, attn_len, attn_len])
-        
+        # self._p_r = p_r[0]        
         relation_dists = []
         for i in range(self._hps.max_dec_steps):
           single_relation_dists = []
@@ -293,8 +308,14 @@ class SummarizationModel(object):
 
 
       # For pointer-generator model, calc final distribution from copy distribution and vocabulary distribution
-      if FLAGS.pointer_gen:
-        final_dists = self._calc_final_dist(vocab_dists, self.attn_dists)
+      if hps.pointer_gen:
+        init_attn = None
+        if hps.markov_attention:
+          if hps.mode in ['train', 'eval']:
+            init_attn = self._cooccurrence_weight
+          else:
+            init_attn = self._prev_attention_dist
+        final_dists = self._calc_final_dist(vocab_dists, self.attn_dists, init_attn)
       else: # final distribution is just vocabulary distribution
         final_dists = vocab_dists
 
@@ -302,7 +323,7 @@ class SummarizationModel(object):
       if hps.mode in ['train', 'eval']:
         # Calculate the loss
         with tf.variable_scope('loss'):
-          if FLAGS.pointer_gen:
+          if hps.pointer_gen:
             # Calculate the loss per step
             # This is fiddly; we use tf.gather_nd to pick out the probabilities of the gold target words
             loss_per_step = [] # will be list length max_dec_steps containing shape (batch_size)
@@ -423,7 +444,7 @@ class SummarizationModel(object):
       dec_in_state = tf.contrib.rnn.LSTMStateTuple(dec_in_state.c[0], dec_in_state.h[0])
     return enc_states, dec_in_state
 
-  def decode_onestep(self, sess, batch, latest_tokens, enc_states, dec_init_states, prev_coverage):
+  def decode_onestep(self, sess, batch, latest_tokens, enc_states, dec_init_states, prev_coverage, prev_attn_dist=None):
     """For beam search decoding. Run the decoder for one step.
 
     Args:
@@ -461,7 +482,7 @@ class SummarizationModel(object):
         self._enc_states: enc_states,
         self._enc_padding_mask: batch.enc_padding_mask,
         self._dec_in_state: new_dec_in_state,
-        self._dec_batch: np.transpose(np.array([latest_tokens])),
+        self._dec_batch: np.transpose(np.array([latest_tokens]))
     }
 
     to_return = {
@@ -475,10 +496,12 @@ class SummarizationModel(object):
       feed[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed[self._max_art_oovs] = batch.max_art_oovs
       to_return['p_gens'] = self.p_gens
-      if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h:
+      if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h or hps.markov_attention:
         feed[self._cooccurrence_matrix] = batch.cooccurrence_matrix
-      if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted:
+      if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention:
         feed[self._cooccurrence_weight] = batch.cooccurrence_weight
+      if hps.markov_attention:
+        feed[self._prev_attention_dist] = prev_attn_dist
     if self._hps.coverage:
       feed[self.prev_coverage] = np.stack(prev_coverage, axis=0)
       to_return['coverage'] = self.coverage
