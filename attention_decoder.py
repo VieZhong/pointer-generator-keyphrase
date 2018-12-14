@@ -89,7 +89,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       # reshape from (batch_size, attn_length) to (batch_size, attn_len, 1, 1)
       prev_coverage = tf.expand_dims(tf.expand_dims(prev_coverage, 2), 3)
 
-    if FLAGS.co_occurrence_h and FLAGS.markov_attention_contribution:
+    if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution:
       attn_len = tf.shape(enc_padding_mask)[1]
       co_matrix = tf.slice(matrix, [0, 0, 0], [-1, attn_len, attn_len]) # shape (batch_size, attn_length, attn_length).
 
