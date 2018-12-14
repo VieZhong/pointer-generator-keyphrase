@@ -43,11 +43,11 @@ class SummarizationModel(object):
     if hps.pointer_gen:
       self._enc_batch_extend_vocab = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch_extend_vocab')
       self._max_art_oovs = tf.placeholder(tf.int32, [], name='max_art_oovs')
-      if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h or hps.markov_attention:
+      if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h or hps.markov_attention or hps.markov_attention_contribution:
         self._cooccurrence_matrix = tf.placeholder(tf.float32, [hps.batch_size, None, None], name='cooccurrence_matrix')
-      if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention:
+      if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention or hps.markov_attention_contribution:
         self._cooccurrence_weight = tf.placeholder(tf.float32, [hps.batch_size, None], name='cooccurrence_weight')
-      if hps.mode == "decode" and hps.markov_attention:
+      if hps.mode == "decode" and (hps.markov_attention or hps.markov_attention_contribution):
         self._prev_attention_dist = tf.placeholder(tf.float32, [hps.batch_size, None], name='prev_attention_dist')
     # decoder part
     self._dec_batch = tf.placeholder(tf.int32, [hps.batch_size, hps.max_dec_steps], name='dec_batch')
@@ -71,9 +71,9 @@ class SummarizationModel(object):
     if FLAGS.pointer_gen:
       feed_dict[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed_dict[self._max_art_oovs] = batch.max_art_oovs
-      if FLAGS.co_occurrence or FLAGS.prev_relation or FLAGS.co_occurrence_h or FLAGS.markov_attention:
+      if FLAGS.co_occurrence or FLAGS.prev_relation or FLAGS.co_occurrence_h or FLAGS.markov_attention or FLAGS.markov_attention_contribution:
         feed_dict[self._cooccurrence_matrix] = batch.cooccurrence_matrix
-      if FLAGS.co_occurrence_i or (FLAGS.coverage and FLAGS.coverage_weighted) or FLAGS.attention_weighted or FLAGS.markov_attention:
+      if FLAGS.co_occurrence_i or (FLAGS.coverage and FLAGS.coverage_weighted) or FLAGS.attention_weighted or FLAGS.markov_attention or FLAGS.markov_attention_contribution:
         feed_dict[self._cooccurrence_weight] = batch.cooccurrence_weight
     if not just_enc:
       feed_dict[self._dec_batch] = batch.dec_batch
@@ -162,13 +162,13 @@ class SummarizationModel(object):
       cell = tf.contrib.rnn.LSTMCell(hps.hidden_dim, state_is_tuple=True, initializer=self.rand_unif_init)
     cell = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=(1.0 - hps.dropout))
 
-    prev_coverage = self.prev_coverage if hps.mode=="decode" and hps.coverage else None # In decode mode, we run attention_decoder one step at a time and so need to pass in the previous step's coverage vector each time
-    co_matrix = self._cooccurrence_matrix if hps.co_occurrence or hps.co_occurrence_h else None
+    prev_coverage = self.prev_coverage if hps.mode == "decode" and hps.coverage else None # In decode mode, we run attention_decoder one step at a time and so need to pass in the previous step's coverage vector each time
+    prev_attn_dist = self._prev_attention_dist if hps.mode == "decode" and hps.markov_attention_contribution else None
+    co_matrix = self._cooccurrence_matrix if hps.co_occurrence or hps.co_occurrence_h or hps.markov_attention_contribution else None
     enc_batch_extend_vocab = self._enc_batch_extend_vocab if hps.co_occurrence_h else None
-    co_weight = self._cooccurrence_weight if hps.coverage and hps.coverage_weighted else None
-    attn_weight = self._cooccurrence_weight if hps.attention_weighted else None
+    attn_weight = self._cooccurrence_weight if hps.attention_weighted or (hps.coverage and hps.coverage_weighted) or hps.markov_attention_contribution else None
 
-    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, coverage_weight=co_weight, attention_weight=attn_weight, emb_enc_inputs=emb_enc_inputs)
+    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, attention_weight=attn_weight, emb_enc_inputs=emb_enc_inputs, prev_attention_dist=prev_attn_dist)
 
     return outputs, out_state, attn_dists, p_gens, coverage
 
@@ -496,9 +496,9 @@ class SummarizationModel(object):
       feed[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed[self._max_art_oovs] = batch.max_art_oovs
       to_return['p_gens'] = self.p_gens
-      if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h or hps.markov_attention:
+      if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h or hps.markov_attention or hps.markov_attention_contribution:
         feed[self._cooccurrence_matrix] = batch.cooccurrence_matrix
-      if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention:
+      if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention or hps.markov_attention_contribution:
         feed[self._cooccurrence_weight] = batch.cooccurrence_weight
       if hps.markov_attention:
         feed[self._prev_attention_dist] = prev_attn_dist

@@ -112,7 +112,7 @@ def run_beam_search(sess, model, vocab, batch):
     states = [h.state for h in hyps] # list of current decoder states of the hypotheses
     prev_coverage = [h.coverage for h in hyps] # list of coverage vectors (or None)
     prev_attn_dist = None
-    if FLAGS.markov_attention:
+    if FLAGS.markov_attention or FLAGS.markov_attention_contribution:
       prev_attn_dist = [h.attn_dists[-1] for h in hyps] if steps > 0 else batch.cooccurrence_weight
     # Run one step of the decoder to get the new info
     (topk_ids, topk_log_probs, new_states, attn_dists, p_gens, new_coverage) = model.decode_onestep(sess=sess,

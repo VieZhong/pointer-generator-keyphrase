@@ -26,7 +26,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # Note: this function is based on tf.contrib.legacy_seq2seq_attention_decoder, which is now outdated.
 # In the future, it would make more sense to write variants on the attention mechanism using the new seq2seq library for tensorflow 1.0: https://www.tensorflow.org/api_guides/python/contrib.seq2seq#Attention
-def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None, coverage_weight=None, attention_weight=None, emb_enc_inputs=None):
+def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None, attention_weight=None, emb_enc_inputs=None, prev_attention_dist=None):
   """
   Args:
     decoder_inputs: A list of 2D Tensors [batch_size x input_size].
@@ -66,7 +66,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
 
     # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
     W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
-    if attention_weight is not None:
+    if FLAGS.attention_weighted and attention_weight is not None:
       attn_weight = tf.tile(tf.expand_dims(tf.expand_dims(attention_weight, 2), 3), [1, 1, 1, attn_size])
       weighted_encoder_states = attn_weight * encoder_states
     else:
@@ -89,7 +89,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       # reshape from (batch_size, attn_length) to (batch_size, attn_len, 1, 1)
       prev_coverage = tf.expand_dims(tf.expand_dims(prev_coverage, 2), 3)
 
-    if FLAGS.co_occurrence_h:
+    if FLAGS.co_occurrence_h and FLAGS.markov_attention_contribution:
       attn_len = tf.shape(enc_padding_mask)[1]
       co_matrix = tf.slice(matrix, [0, 0, 0], [-1, attn_len, attn_len]) # shape (batch_size, attn_length, attn_length).
 
@@ -120,8 +120,8 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
         if use_coverage and coverage is not None: # non-first step of coverage
 
           # Multiply coverage vector by w_c to get coverage_features.
-          if coverage_weight is not None:
-            co_weight = tf.expand_dims(tf.expand_dims(coverage_weight, 2), 3)
+          if FLAGS.coverage_weighted and attention_weight is not None:
+            co_weight = tf.expand_dims(tf.expand_dims(attention_weight, 2), 3)
             weighted_coverage = co_weight * coverage
           else:
             weighted_coverage = coverage
@@ -203,6 +203,15 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
           context_vector, attn_dist, coverage = attention(state, coverage)
         else:
           context_vector, attn_dist, coverage = attention(state, coverage, decoder_input_ids[i])
+      if FLAGS.markov_attention_contribution:
+        if prev_attention_dist is not None:
+          prev_attn = prev_attention_dist
+        else:
+          prev_attn = attention_weight if i == 0 else attn_dists[i - 1]
+        prev_attn_dist = tf.tile(tf.expand_dims(prev_attn, 1), [1, attn_len, 1])
+        mark_dist = tf.reduce_sum(tf.multiply(tf.matrix_transpose(co_matrix), prev_attn_dist), 2)
+        p_attn = tf.sigmoid(linear([state.c, state.h], 1, True))
+        attn_dist = p_attn * attn_dist + (1 - p_attn) * mark_dist
       attn_dists.append(attn_dist)
 
       # Calculate p_gen
@@ -220,7 +229,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       with variable_scope.variable_scope("AttnOutputProjection"):
         if FLAGS.target_siding_bridge:
           max_attn_index = tf.expand_dims(tf.argmax(attn_dist, 1, output_type=tf.int32), 1)
-          batch_nums = tf.expand_dims(tf.range(0, limit=FLAGS.batch_size), 1) # shape (batch_size, 1)
+          batch_nums = tf.expand_dims(tf.range(0, limit=batch_size), 1) # shape (batch_size, 1)
           max_attn_index = tf.stack((batch_nums, max_attn_index), axis=2)
           max_prop_input = tf.reshape(tf.gather_nd(emb_enc_inputs, max_attn_index), [-1, FLAGS.emb_dim if not FLAGS.co_occurrence_i else FLAGS.emb_dim + 1])
           output = linear([cell_output] + [context_vector] + [max_prop_input], cell.output_size, True)
