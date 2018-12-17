@@ -310,7 +310,7 @@ class SummarizationModel(object):
       # For pointer-generator model, calc final distribution from copy distribution and vocabulary distribution
       if hps.pointer_gen:
         init_attn = None
-        if hps.markov_attention or hps.markov_attention_contribution:
+        if hps.markov_attention:
           if hps.mode in ['train', 'eval']:
             init_attn = self._cooccurrence_weight
           else:
@@ -500,7 +500,7 @@ class SummarizationModel(object):
         feed[self._cooccurrence_matrix] = batch.cooccurrence_matrix
       if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention or hps.markov_attention_contribution:
         feed[self._cooccurrence_weight] = batch.cooccurrence_weight
-      if hps.markov_attention:
+      if hps.markov_attention or hps.markov_attention_contribution:
         feed[self._prev_attention_dist] = prev_attn_dist
     if self._hps.coverage:
       feed[self.prev_coverage] = np.stack(prev_coverage, axis=0)
