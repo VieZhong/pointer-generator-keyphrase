@@ -74,7 +74,7 @@ tf.app.flags.DEFINE_boolean('pointer_gen', True, 'If True, use pointer-generator
 tf.app.flags.DEFINE_boolean('coverage', False, 'Use coverage mechanism. Note, the experiments reported in the ACL paper train WITHOUT coverage until converged, and then train for a short phase WITH coverage afterwards. i.e. to reproduce the results in the ACL paper, turn this off for most of training then turn on for a short phase at the end.')
 tf.app.flags.DEFINE_float('cov_loss_wt', 1.0, 'Weight of coverage loss (lambda in the paper). If zero, then no incentive to minimize coverage loss.')
 
-# Co-occurence Hyperparameters
+# VieZhong Improvement Hyperparameters
 tf.app.flags.DEFINE_boolean('attention_weighted', False, 'Whether attention mechanism is weighted.')
 tf.app.flags.DEFINE_boolean('coverage_weighted', False, 'Whether coverage mechanism is weighted.')
 tf.app.flags.DEFINE_boolean('co_occurrence', False, 'Whether to use co_occurrence factor.')

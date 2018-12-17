@@ -310,7 +310,7 @@ class SummarizationModel(object):
       # For pointer-generator model, calc final distribution from copy distribution and vocabulary distribution
       if hps.pointer_gen:
         init_attn = None
-        if hps.markov_attention:
+        if hps.markov_attention or hps.markov_attention_contribution:
           if hps.mode in ['train', 'eval']:
             init_attn = self._cooccurrence_weight
           else:
