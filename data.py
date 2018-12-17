@@ -430,3 +430,10 @@ def softmax(z):
 def get_weight_from_matrix(matrix):
   with tf.Session(graph=matrix_graph, config=util.get_config()) as sess:
     return sess.run(weight, {matrix_placeholder: matrix})
+
+def replace_number_to_string(string):
+  words = string.split(' ')
+  for i, word in enumerate(words):
+    if word.isdigit():
+      words[i] = "<digit>"
+  return ' '.join(words)

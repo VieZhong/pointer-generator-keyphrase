@@ -396,4 +396,4 @@ class Batcher(object):
       if len(article_text)==0: # See https://github.com/abisee/pointer-generator/issues/1
         tf.logging.warning('Found an example with empty article text. Skipping it.')
       else:
-        yield (article_text, abstract_text)
+        yield (data.replace_number_to_string(article_text), data.replace_number_to_string(abstract_text))
