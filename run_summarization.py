@@ -15,7 +15,7 @@
 # ==============================================================================
 
 """This is the top-level file to train, evaluate or test your summarization model"""
-
+# coding=utf-8
 import sys
 import time
 import os
