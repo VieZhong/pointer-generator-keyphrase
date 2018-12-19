@@ -24,11 +24,10 @@ import numpy as np
 import tensorflow as tf
 import data
 
-
 class Example(object):
   """Class representing a train/val/test example for text summarization."""
 
-  def __init__(self, article, abstract_sentences, abstract_sentences_all, vocab, hps, stop_words):
+  def __init__(self, article, tags, abstract_sentences, abstract_sentences_all, vocab, hps, stop_words):
     """Initializes the Example, performing tokenization and truncation to produce the encoder, decoder and target sequences, which are stored in self.
 
     Args:
@@ -70,6 +69,8 @@ class Example(object):
 
       # Overwrite decoder target sequence so it uses the temp article OOV ids
       _, self.target = self.get_dec_inp_targ_seqs(abs_ids_extend_vocab, hps.max_dec_steps, start_decoding, stop_decoding)
+
+    self.tags = tags
 
     # Store the original strings
     self.original_article = article
@@ -184,12 +185,17 @@ class Batch(object):
         self.cooccurrence_matrix = np.zeros((hps.batch_size, hps.max_enc_steps, hps.max_enc_steps), dtype=np.float32)
       if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention or hps.markov_attention_contribution:
         self.cooccurrence_weight = np.zeros((hps.batch_size, max_enc_seq_len), dtype=np.float32)
+      if hps.tagger_attention or hps.tagger_encoding:
+        tagger_one_hot_size = len(data.TAGS_SET) + 1
+        self.tagger_matrix = np.zeros((hps.batch_size, max_enc_seq_len, tagger_one_hot_size), dtype=np.float32)
       for i, ex in enumerate(example_list):
         self.enc_batch_extend_vocab[i, :] = ex.enc_input_extend_vocab[:]
         if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h or hps.markov_attention or hps.markov_attention_contribution:
           self.cooccurrence_matrix[i, :ex.enc_len, :ex.enc_len] = ex.cooccurrence_matrix[:, :]
         if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention or hps.markov_attention_contribution:
           self.cooccurrence_weight[i, :ex.enc_len] = ex.cooccurrence_weight[:]
+        if hps.tagger_attention or hps.tagger_encoding:
+          self.tagger_matrix[i, :ex.enc_len, :] = np.eye(tagger_one_hot_size, dtype=np.float32)[ex.tags][:, :]
 
   def init_decoder_seq(self, example_list, hps):
     """Initializes the following:
@@ -305,7 +311,7 @@ class Batcher(object):
 
     while True:
       try:
-        (article, abstract) = next(input_gen) # read the next example from file. article and abstract are both strings.
+        (article, abstract, tags) = next(input_gen) # read the next example from file. article and abstract are both strings.
       except StopIteration: # if there are no more examples:
         tf.logging.info("The example generator for this example queue filling thread has exhausted data.")
         if self._single_pass:
@@ -316,11 +322,17 @@ class Batcher(object):
           raise Exception("single_pass mode is off but the example generator is out of data; error.")
 
       # if self._hps.mode in ['train', 'eval']:
+      
+      if self._hps.tagger_attention or self._hps.tagger_encoding:
+        tags = data.get_tagger_index(tags)
+      else:
+        tags = None
+
       abstract_sentences_all = data.abstract2sents(abstract); # Use the <s> and </s> tags in abstract to get a list of sentences.
       for i in range(self._hps.max_keyphrase_num):
         sent = abstract_sentences_all[i % len(abstract_sentences_all)]
         abstract_sentences = [sent.strip()]
-        example = Example(article, abstract_sentences, abstract_sentences_all, self._vocab, self._hps, self._stop_words) # Process into an Example.
+        example = Example(article, tags, abstract_sentences, abstract_sentences_all, self._vocab, self._hps, self._stop_words) # Process into an Example.
         self._example_queue.put(example) # place the Example in the example queue.
 
       # if self._hps.mode == "decode":
@@ -390,10 +402,11 @@ class Batcher(object):
       try:
         article_text = e.features.feature['article'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
         abstract_text = e.features.feature['keyword'].bytes_list.value[0].decode() # the abstract text was saved under the key 'abstract' in the data files
+        abstract_tags = e.features.feature['tags'].bytes_list.value[0].decode()
       except ValueError:
         tf.logging.error('Failed to get article or abstract from example')
         continue
       if len(article_text)==0: # See https://github.com/abisee/pointer-generator/issues/1
         tf.logging.warning('Found an example with empty article text. Skipping it.')
       else:
-        yield (data.replace_number_to_string(article_text), data.replace_number_to_string(abstract_text))
+        yield (data.replace_number_to_string(article_text), data.replace_number_to_string(abstract_text), abstract_tags)

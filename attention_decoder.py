@@ -26,7 +26,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # Note: this function is based on tf.contrib.legacy_seq2seq_attention_decoder, which is now outdated.
 # In the future, it would make more sense to write variants on the attention mechanism using the new seq2seq library for tensorflow 1.0: https://www.tensorflow.org/api_guides/python/contrib.seq2seq#Attention
-def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None, attention_weight=None, emb_enc_inputs=None, prev_attention_dist=None):
+def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None, attention_weight=None, emb_enc_inputs=None, prev_attention_dist=None, tagger_matrix=None):
   """
   Args:
     decoder_inputs: A list of 2D Tensors [batch_size x input_size].
@@ -63,6 +63,9 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     # attn_vec_size is the length of the vectors v, b_attn, (W_h h_i) and (W_s s_t).
     # We set it to be equal to the size of the encoder states.
     attention_vec_size = attn_size
+    if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution:
+      attn_len = tf.shape(enc_padding_mask)[1]
+      co_matrix = tf.slice(matrix, [0, 0, 0], [-1, attn_len, attn_len]) # shape (batch_size, attn_length, attn_length).
 
     # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
     W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
@@ -74,10 +77,15 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     encoder_features = nn_ops.conv2d(weighted_encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
 
     if FLAGS.co_occurrence:
-      c_matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, attn_len, 1, attn_len)
+      c_matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, max_enc_steps, 1, max_enc_steps)
       W_p = variable_scope.get_variable("W_p", [1, 1, FLAGS.max_enc_steps, attention_vec_size])
       matrix_features = nn_ops.conv2d(c_matrix, W_p, [1, 1, 1, 1], "SAME")
       matrix_features = tf.slice(matrix_features, [0, 0, 0, 0], [-1, tf.shape(enc_padding_mask)[1], -1, -1])
+
+    if FLAGS.tagger_attention:
+      tag_matrix = tf.expand_dims(tagger_matrix, axis=2) # now is shape (batch_size, max_enc_steps, 1, tag_size)
+      W_t = variable_scope.get_variable("W_t", [1, 1, len(data.TAGS_SET) + 1, attention_vec_size])
+      tag_features = nn_ops.conv2d(tag_matrix, W_t, [1, 1, 1, 1], "SAME")
 
     # Get the weight vectors v and w_c (w_c is for coverage)
     v = variable_scope.get_variable("v", [attention_vec_size])
@@ -89,9 +97,6 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       # reshape from (batch_size, attn_length) to (batch_size, attn_len, 1, 1)
       prev_coverage = tf.expand_dims(tf.expand_dims(prev_coverage, 2), 3)
 
-    if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution:
-      attn_len = tf.shape(enc_padding_mask)[1]
-      co_matrix = tf.slice(matrix, [0, 0, 0], [-1, attn_len, attn_len]) # shape (batch_size, attn_length, attn_length).
 
     def attention(decoder_state, coverage=None, input_ids=None):
       """Calculate the context vector and attention distribution from the decoder state.
@@ -130,6 +135,8 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
           sum_features = encoder_features + decoder_features + coverage_features
           if FLAGS.co_occurrence:
             sum_features += matrix_features
+          if FLAGS.tagger_attention:
+            sum_features += tag_features
 
           # Calculate v^T tanh(W_h h_i + W_s s_t + w_c c_i^t + b_attn)
           e = math_ops.reduce_sum(v * math_ops.tanh(sum_features), [2, 3])  # shape (batch_size,attn_length)
@@ -144,6 +151,8 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
           sum_features = encoder_features + decoder_features
           if FLAGS.co_occurrence:
             sum_features += matrix_features
+          if FLAGS.tagger_attention:
+            sum_features += tag_features
           e = math_ops.reduce_sum(v * math_ops.tanh(sum_features), [2, 3]) # calculate e
 
           # Calculate attention distribution

@@ -22,6 +22,7 @@ import numpy as np
 import tensorflow as tf
 from attention_decoder import attention_decoder
 from tensorflow.contrib.tensorboard.plugins import projector
+import data
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -49,6 +50,8 @@ class SummarizationModel(object):
         self._cooccurrence_weight = tf.placeholder(tf.float32, [hps.batch_size, None], name='cooccurrence_weight')
       if hps.mode == "decode" and (hps.markov_attention or hps.markov_attention_contribution):
         self._prev_attention_dist = tf.placeholder(tf.float32, [hps.batch_size, None], name='prev_attention_dist')
+      if hps.tagger_attention or hps.tagger_encoding:
+        self._tagger_matrix = tf.placeholder(tf.float32, [hps.batch_size, None, len(data.TAGS_SET) + 1], name='tagger_matrix')
     # decoder part
     self._dec_batch = tf.placeholder(tf.int32, [hps.batch_size, hps.max_dec_steps], name='dec_batch')
     self._target_batch = tf.placeholder(tf.int32, [hps.batch_size, hps.max_dec_steps], name='target_batch')
@@ -75,6 +78,8 @@ class SummarizationModel(object):
         feed_dict[self._cooccurrence_matrix] = batch.cooccurrence_matrix
       if FLAGS.co_occurrence_i or (FLAGS.coverage and FLAGS.coverage_weighted) or FLAGS.attention_weighted or FLAGS.markov_attention or FLAGS.markov_attention_contribution:
         feed_dict[self._cooccurrence_weight] = batch.cooccurrence_weight
+      if FLAGS.tagger_attention or FLAGS.tagger_encoding:
+        feed_dict[self._tagger_matrix] = batch.tagger_matrix
     if not just_enc:
       feed_dict[self._dec_batch] = batch.dec_batch
       feed_dict[self._target_batch] = batch.target_batch
@@ -167,8 +172,9 @@ class SummarizationModel(object):
     co_matrix = self._cooccurrence_matrix if hps.co_occurrence or hps.co_occurrence_h or hps.markov_attention_contribution else None
     enc_batch_extend_vocab = self._enc_batch_extend_vocab if hps.co_occurrence_h else None
     attn_weight = self._cooccurrence_weight if hps.attention_weighted or (hps.coverage and hps.coverage_weighted) or hps.markov_attention_contribution else None
+    tagger_matrix = self._tagger_matrix if hps.tagger_attention else None
 
-    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, attention_weight=attn_weight, emb_enc_inputs=emb_enc_inputs, prev_attention_dist=prev_attn_dist)
+    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, attention_weight=attn_weight, emb_enc_inputs=emb_enc_inputs, prev_attention_dist=prev_attn_dist, tagger_matrix=tagger_matrix)
 
     return outputs, out_state, attn_dists, p_gens, coverage
 
@@ -280,8 +286,13 @@ class SummarizationModel(object):
         emb_dec_inputs = [tf.nn.embedding_lookup(embedding, x) for x in tf.unstack(self._dec_batch, axis=1)] # list length max_dec_steps containing shape (batch_size, emb_size)
         decoder_input_ids = [x for x in tf.unstack(self._dec_batch, axis=1)] if hps.co_occurrence_h else None
 
+        emb_dim = hps.emb_dim
         if hps.co_occurrence_i:
-          emb_enc_inputs = tf.reshape(tf.concat([emb_enc_inputs, tf.expand_dims(self._cooccurrence_weight, 2)], 2), [hps.batch_size, -1, hps.emb_dim + 1])
+          emb_dim += 1
+          emb_enc_inputs = tf.reshape(tf.concat([emb_enc_inputs, tf.expand_dims(self._cooccurrence_weight, 2)], 2), [hps.batch_size, -1, emb_dim])
+        if hps.tagger_encoding:
+          emb_dim += (len(data.TAGS_SET) + 1)
+          emb_enc_inputs = tf.reshape(tf.concat([emb_enc_inputs, self._tagger_matrix], 2), [hps.batch_size, -1, emb_dim])
 
       # Add the encoder.
         enc_outputs, fw_st, bw_st = self._add_encoder(emb_enc_inputs, self._enc_lens)
@@ -502,6 +513,8 @@ class SummarizationModel(object):
         feed[self._cooccurrence_weight] = batch.cooccurrence_weight
       if hps.markov_attention or hps.markov_attention_contribution:
         feed[self._prev_attention_dist] = prev_attn_dist
+      if hps.tagger_attention or hps.tagger_encoding:
+        feed[self._tagger_matrix] = batch.tagger_matrix
     if self._hps.coverage:
       feed[self.prev_coverage] = np.stack(prev_coverage, axis=0)
       to_return['coverage'] = self.coverage

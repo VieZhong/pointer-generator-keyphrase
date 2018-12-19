@@ -37,7 +37,7 @@ START_DECODING = '[START]' # This has a vocab id, which is used at the start of 
 STOP_DECODING = '[STOP]' # This has a vocab id, which is used at the end of untruncated target sequences
 
 PUNCTUATION_MARKS = [",", ".", "?", "!", "-", "-rrb-", "-lrb-", "-rsb-", "-lsb-", "'", "\"", "[", "]", "@", "+", "&", "$", ";", ":", "/", "|", "#", "~", "_", "`", "＂", "。", "，", "？", "！", "《", "》", "<", ">", "．", "：", "、", "``", "''", "--", "；", "）", "（", "(", ")", "<digit>"]
-
+TAGS_SET = ['CC', 'CD', 'DT', 'EX', 'FW', 'IN', 'IN/that', 'JJ', 'JJR', 'JJS', 'LS', 'MD', 'NN', 'NNS', 'NP', 'NPS', 'PDT', 'POS', 'PP', 'PP$', 'RB', 'RBR', 'RBS', 'RP', 'SENT', 'SYM', 'TO', 'UH', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ', 'VH', 'VHD', 'VHG', 'VHN', 'VHP', 'VHZ', 'VV', 'VVD', 'VVG', 'VVN', 'VVP', 'VVZ', 'WDT', 'WP', 'WP$', 'WRB', '#', '$', '“', '``', '(', ')', ',', ':']
 # Note: none of <s>, </s>, [PAD], [UNK], [START], [STOP] should appear in the vocab file.
 
 class LastUpdatedOrderedDict(OrderedDict):
@@ -431,9 +431,17 @@ def get_weight_from_matrix(matrix):
   with tf.Session(graph=matrix_graph, config=util.get_config()) as sess:
     return sess.run(weight, {matrix_placeholder: matrix})
 
+
 def replace_number_to_string(string):
   words = string.split(' ')
   for i, word in enumerate(words):
     if word.isdigit():
       words[i] = "<digit>"
   return ' '.join(words)
+
+
+def get_tagger_index(tags):
+  tags = tags.split(' ')
+  for i, tag in enumerate(tags):
+    tags[i] = TAGS_SET.index(tag) if tag in TAGS_SET else len(TAGS_SET)
+  return tags
