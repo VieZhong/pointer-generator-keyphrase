@@ -21,6 +21,7 @@ from tensorflow.python.ops import variable_scope
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import nn_ops
 from tensorflow.python.ops import math_ops
+import data
 
 FLAGS = tf.app.flags.FLAGS
 
