@@ -441,7 +441,7 @@ def replace_number_to_string(string):
 
 
 def get_tagger_index(tags):
-  tags = tags.split(' ')
+  tags = tags.split()
   for i, tag in enumerate(tags):
     tags[i] = TAGS_SET.index(tag) if tag in TAGS_SET else len(TAGS_SET)
   return tags

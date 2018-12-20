@@ -70,7 +70,7 @@ class Example(object):
       # Overwrite decoder target sequence so it uses the temp article OOV ids
       _, self.target = self.get_dec_inp_targ_seqs(abs_ids_extend_vocab, hps.max_dec_steps, start_decoding, stop_decoding)
 
-    self.tags = tags[:hps.max_enc_steps]
+    self.tags = tags[:self.enc_len]
 
     # Store the original strings
     self.original_article = article
@@ -402,11 +402,12 @@ class Batcher(object):
       try:
         article_text = e.features.feature['article'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
         abstract_text = e.features.feature['keyword'].bytes_list.value[0].decode() # the abstract text was saved under the key 'abstract' in the data files
-        abstract_tags = e.features.feature['tags'].bytes_list.value[0].decode()
+        article_tags = e.features.feature['tags'].bytes_list.value[0].decode()
+        tf.logging.info(article_tags)
       except ValueError:
         tf.logging.error('Failed to get article or abstract from example')
         continue
       if len(article_text)==0: # See https://github.com/abisee/pointer-generator/issues/1
         tf.logging.warning('Found an example with empty article text. Skipping it.')
       else:
-        yield (data.replace_number_to_string(article_text), data.replace_number_to_string(abstract_text), abstract_tags)
+        yield (data.replace_number_to_string(article_text), data.replace_number_to_string(abstract_text), article_tags)
