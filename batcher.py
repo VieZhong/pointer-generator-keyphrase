@@ -70,7 +70,8 @@ class Example(object):
       # Overwrite decoder target sequence so it uses the temp article OOV ids
       _, self.target = self.get_dec_inp_targ_seqs(abs_ids_extend_vocab, hps.max_dec_steps, start_decoding, stop_decoding)
 
-    self.tags = tags[:self.enc_len]
+    if tags in not None:
+      self.tags = tags[:self.enc_len]
 
     # Store the original strings
     self.original_article = article
