@@ -403,7 +403,7 @@ class Batcher(object):
       try:
         article_text = e.features.feature['article'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
         abstract_text = e.features.feature['keyword'].bytes_list.value[0].decode() # the abstract text was saved under the key 'abstract' in the data files
-        article_tags = e.features.feature['tags'].bytes_list.value[0].decode()
+        article_tags = e.features.feature['tags'].bytes_list.value[0].decode() if self._hps.tagger_attention or self._hps.tagger_encoding else None
       except ValueError:
         tf.logging.error('Failed to get article or abstract from example')
         continue
