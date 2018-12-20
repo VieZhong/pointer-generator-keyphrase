@@ -70,7 +70,7 @@ class Example(object):
       # Overwrite decoder target sequence so it uses the temp article OOV ids
       _, self.target = self.get_dec_inp_targ_seqs(abs_ids_extend_vocab, hps.max_dec_steps, start_decoding, stop_decoding)
 
-    self.tags = tags
+    self.tags = tags[:hps.max_enc_steps]
 
     # Store the original strings
     self.original_article = article
@@ -195,7 +195,7 @@ class Batch(object):
         if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention or hps.markov_attention_contribution:
           self.cooccurrence_weight[i, :ex.enc_len] = ex.cooccurrence_weight[:]
         if hps.tagger_attention or hps.tagger_encoding:
-          self.tagger_matrix[i, :ex.enc_len, :] = np.eye(tagger_one_hot_size, dtype=np.float32)[ex.tags][:, :]
+          self.tagger_matrix[i, :ex.enc_len, :] = np.eye(tagger_one_hot_size, dtype=np.float32)[ex.tags[:ex.enc_len]][:, :]
 
   def init_decoder_seq(self, example_list, hps):
     """Initializes the following:
