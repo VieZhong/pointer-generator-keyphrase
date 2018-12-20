@@ -403,7 +403,6 @@ class Batcher(object):
         article_text = e.features.feature['article'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
         abstract_text = e.features.feature['keyword'].bytes_list.value[0].decode() # the abstract text was saved under the key 'abstract' in the data files
         article_tags = e.features.feature['tags'].bytes_list.value[0].decode()
-        tf.logging.info(article_tags)
       except ValueError:
         tf.logging.error('Failed to get article or abstract from example')
         continue
