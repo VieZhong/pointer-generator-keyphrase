@@ -323,12 +323,6 @@ class Batcher(object):
           raise Exception("single_pass mode is off but the example generator is out of data; error.")
 
       # if self._hps.mode in ['train', 'eval']:
-      
-      if self._hps.tagger_attention or self._hps.tagger_encoding:
-        tags = data.get_tagger_index(article, tags)
-      else:
-        tags = None
-
       abstract_sentences_all = data.abstract2sents(abstract); # Use the <s> and </s> tags in abstract to get a list of sentences.
       for i in range(self._hps.max_keyphrase_num):
         sent = abstract_sentences_all[i % len(abstract_sentences_all)]
@@ -403,7 +397,11 @@ class Batcher(object):
       try:
         article_text = e.features.feature['article'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
         abstract_text = e.features.feature['keyword'].bytes_list.value[0].decode() # the abstract text was saved under the key 'abstract' in the data files
-        article_tags = e.features.feature['tags'].bytes_list.value[0].decode() if self._hps.tagger_attention or self._hps.tagger_encoding else None
+        if self._hps.tagger_attention or self._hps.tagger_encoding:
+          article_tags = e.features.feature['tags'].bytes_list.value[0].decode() if self._hps.tagger_attention or self._hps.tagger_encoding else None
+          article_tags = data.get_tagger_index(abstract_text, article_tags)
+        else:
+          article_tags = None
       except ValueError:
         tf.logging.error('Failed to get article or abstract from example')
         continue

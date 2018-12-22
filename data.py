@@ -441,7 +441,7 @@ def replace_number_to_string(string):
 
 
 def get_tagger_index(text, tags):
-  text = text.split(' ') 
+  text = text.split(' ') #此处必须加参数空格' '，因为split()包含不间断空格"\xa0"
   tags = tags.split()
   result = []
   for i, word in enumerate(text):
