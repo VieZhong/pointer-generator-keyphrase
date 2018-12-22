@@ -433,20 +433,21 @@ def get_weight_from_matrix(matrix):
 
 
 def replace_number_to_string(string):
-  words = string.split(' ')
+  words = string.split()
   for i, word in enumerate(words):
     if word.isdigit():
       words[i] = "<digit>"
   return ' '.join(words)
 
 
-def get_tagger_index(artile, tags):
-  article = article.split()
+def get_tagger_index(text, tags):
+  text = text.split(' ') 
   tags = tags.split()
-  if len(tags) != len(article):
-    print(" ".join(article))
-    print("\n\n")
-    print(" ".join(tags))
-  for i, tag in enumerate(tags):
-    tags[i] = TAGS_SET.index(tag) if tag in TAGS_SET else len(TAGS_SET)
-  return tags
+  result = []
+  for i, word in enumerate(text):
+    tag = TAGS_SET.index(tags[i]) if tags[i] in TAGS_SET else len(TAGS_SET)
+    if '\xa0' in word:
+      result.extend([tag for j in range(len(word.split('\xa0')))])
+    else:
+      result.append(tag)
+  return result
