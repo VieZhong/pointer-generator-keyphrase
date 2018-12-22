@@ -440,8 +440,13 @@ def replace_number_to_string(string):
   return ' '.join(words)
 
 
-def get_tagger_index(tags):
+def get_tagger_index(artile, tags):
+  article = article.split()
   tags = tags.split()
+  if len(tags) != len(article):
+    print(" ".join(article))
+    print("\n\n")
+    print(" ".join(tags))
   for i, tag in enumerate(tags):
     tags[i] = TAGS_SET.index(tag) if tag in TAGS_SET else len(TAGS_SET)
   return tags

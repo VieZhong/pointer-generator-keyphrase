@@ -325,7 +325,7 @@ class Batcher(object):
       # if self._hps.mode in ['train', 'eval']:
       
       if self._hps.tagger_attention or self._hps.tagger_encoding:
-        tags = data.get_tagger_index(tags)
+        tags = data.get_tagger_index(article, tags)
       else:
         tags = None
 
