@@ -220,7 +220,10 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
           prev_attn = attention_weight if i == 0 else attn_dists[i - 1]
         prev_attn_dist = tf.tile(tf.expand_dims(prev_attn, 1), [1, attn_len, 1])
         mark_dist = tf.reduce_sum(tf.multiply(tf.matrix_transpose(co_matrix), prev_attn_dist), 2)
-        p_attn = tf.sigmoid(linear([state.c, state.h], 1, True, scope="markov_attn"))
+        if FLAGS.markov_attention_contribution_used_x: 
+          p_attn = tf.sigmoid(linear([state.c, state.h, x], 1, True, scope="markov_attn"))
+        else:
+          p_attn = tf.sigmoid(linear([state.c, state.h], 1, True, scope="markov_attn"))
         attn_dist = p_attn * attn_dist + (1 - p_attn) * mark_dist
       attn_dists.append(attn_dist)
 
