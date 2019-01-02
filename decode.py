@@ -31,6 +31,7 @@ import hashlib
 FLAGS = tf.app.flags.FLAGS
 
 SECS_UNTIL_NEW_CKPT = 60  # max number of seconds before loading new checkpoint
+DECODE_MAX_NUM = 50
 
 
 class BeamSearchDecoder(object):
@@ -108,7 +109,7 @@ class BeamSearchDecoder(object):
 
       decoded_words = []
       for hyp in all_hyp:
-        if len(decoded_words) < len(original_abstract_sents):
+        if len(decoded_words) < DECODE_MAX_NUM:
           # Extract the output ids from the hypothesis and convert back to words
           output_ids = [int(t) for t in hyp.tokens[1:]]
           decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
