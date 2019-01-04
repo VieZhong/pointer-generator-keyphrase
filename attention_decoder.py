@@ -131,7 +131,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
             co_weight = tf.expand_dims(tf.expand_dims(attention_weight, 2), 3)
             weighted_coverage = co_weight * coverage
             if FLAGS.coverage_weighted_expansion:
-              weighted_coverage *= attn_len
+              weighted_coverage *= tf.to_float(attn_len)
           else:
             weighted_coverage = coverage
           coverage_features = nn_ops.conv2d(weighted_coverage, w_c, [1, 1, 1, 1], "SAME") # c has shape (batch_size, attn_length, 1, attention_vec_size)
