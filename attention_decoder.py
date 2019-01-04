@@ -73,6 +73,8 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     if FLAGS.attention_weighted and attention_weight is not None:
       attn_weight = tf.tile(tf.expand_dims(tf.expand_dims(attention_weight, 2), 3), [1, 1, 1, attn_size])
       weighted_encoder_states = attn_weight * encoder_states
+      if FLAGS.attention_weighted_expansion:
+        weighted_encoder_states *= tf.shape(enc_padding_mask)[1]
     else:
       weighted_encoder_states = encoder_states
     encoder_features = nn_ops.conv2d(weighted_encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
