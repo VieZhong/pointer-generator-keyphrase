@@ -64,8 +64,9 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     # attn_vec_size is the length of the vectors v, b_attn, (W_h h_i) and (W_s s_t).
     # We set it to be equal to the size of the encoder states.
     attention_vec_size = attn_size
-    if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution:
+    if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution or FLAGS.coverage_weighted_expansion:
       attn_len = tf.shape(enc_padding_mask)[1]
+    if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution:
       co_matrix = tf.slice(matrix, [0, 0, 0], [-1, attn_len, attn_len]) # shape (batch_size, attn_length, attn_length).
 
     # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
@@ -73,8 +74,6 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     if FLAGS.attention_weighted and attention_weight is not None:
       attn_weight = tf.tile(tf.expand_dims(tf.expand_dims(attention_weight, 2), 3), [1, 1, 1, attn_size])
       weighted_encoder_states = attn_weight * encoder_states
-      if FLAGS.attention_weighted_expansion:
-        weighted_encoder_states *= tf.shape(enc_padding_mask)[1]
     else:
       weighted_encoder_states = encoder_states
     encoder_features = nn_ops.conv2d(weighted_encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
@@ -131,6 +130,8 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
           if FLAGS.coverage_weighted and attention_weight is not None:
             co_weight = tf.expand_dims(tf.expand_dims(attention_weight, 2), 3)
             weighted_coverage = co_weight * coverage
+            if FLAGS.coverage_weighted_expansion:
+              weighted_coverage *= attn_len
           else:
             weighted_coverage = coverage
           coverage_features = nn_ops.conv2d(weighted_coverage, w_c, [1, 1, 1, 1], "SAME") # c has shape (batch_size, attn_length, 1, attention_vec_size)

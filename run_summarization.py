@@ -78,7 +78,7 @@ tf.app.flags.DEFINE_float('cov_loss_wt', 1.0, 'Weight of coverage loss (lambda i
 # VieZhong Improvement Hyperparameters
 tf.app.flags.DEFINE_boolean('attention_weighted', False, 'Whether attention mechanism is weighted.')
 tf.app.flags.DEFINE_boolean('coverage_weighted', False, 'Whether coverage mechanism is weighted.')
-tf.app.flags.DEFINE_boolean('attention_weighted_expansion', False, 'Whether coverage mechanism is weighted.')
+tf.app.flags.DEFINE_boolean('coverage_weighted_expansion', False, 'Whether coverage mechanism is weighted.')
 tf.app.flags.DEFINE_boolean('co_occurrence', False, 'Whether to use co_occurrence factor.')
 tf.app.flags.DEFINE_boolean('co_occurrence_h', False, 'Whether to use co_occurrence_h factor.')
 tf.app.flags.DEFINE_boolean('co_occurrence_i', False, 'Whether to concat co_occurrence matrix to encoder embeddings.')
@@ -324,7 +324,7 @@ def main(unused_argv):
   #   raise Exception("The co_occurrence flag should be True when the prev_relation flag is True")
 
   # Make a namedtuple hps, containing the values of the hyperparameters that the model needs
-  hparam_list = ['tagger_encoding', 'tagger_attention', 'source_siding_bridge', 'target_siding_bridge', 'language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'beam_depth', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'attention_weighted', 'coverage', 'coverage_weighted', 'attention_weighted_expansion', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'co_occurrence_i', 'cov_loss_wt', 'pointer_gen', 'cell_type', 'markov_attention', 'markov_attention_contribution', 'markov_attention_contribution_used_x']
+  hparam_list = ['tagger_encoding', 'tagger_attention', 'source_siding_bridge', 'target_siding_bridge', 'language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'beam_depth', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'attention_weighted', 'coverage', 'coverage_weighted', 'coverage_weighted_expansion', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'co_occurrence_i', 'cov_loss_wt', 'pointer_gen', 'cell_type', 'markov_attention', 'markov_attention_contribution', 'markov_attention_contribution_used_x']
   hps_dict = {}
   for key,val in FLAGS.__flags.items(): # for each flag
     if key in hparam_list: # if it's in the list
