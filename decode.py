@@ -70,7 +70,7 @@ class BeamSearchDecoder(object):
 
     if FLAGS.single_pass:
       # Make the dirs to contain output written in the correct format for pyrouge
-      self._rouge_ref_dir = os.path.join(self._decode_dir, "reference")
+      self._rouge_ref_dir = FLAGS.ref_dir.replace('__DATASET__', 'kp20k' if FLAGS.language == 'english' else 'nssd_data')
       if not os.path.exists(self._rouge_ref_dir): os.mkdir(self._rouge_ref_dir)
       self._rouge_dec_dir = os.path.join(self._decode_dir, "decoded")
       if not os.path.exists(self._rouge_dec_dir): os.mkdir(self._rouge_dec_dir)
@@ -184,9 +184,10 @@ class BeamSearchDecoder(object):
     ref_file = os.path.join(self._rouge_ref_dir, "%06d_reference.txt" % ex_index)
     decoded_file = os.path.join(self._rouge_dec_dir, "%06d_decoded.txt" % ex_index)
 
-    with open(ref_file, "w") as f:
-      for idx,sent in enumerate(reference_sents):
-        f.write(sent) if idx==len(reference_sents)-1 else f.write(sent+"\n")
+    if not os.path.exists(ref_file):
+      with open(ref_file, "w") as f:
+        for idx,sent in enumerate(reference_sents):
+          f.write(sent) if idx==len(reference_sents)-1 else f.write(sent+"\n")
     with open(decoded_file, "w") as f:
       for idx,sent in enumerate(decoded_sents):
         f.write(sent) if idx==len(decoded_sents)-1 else f.write(sent+"\n")
