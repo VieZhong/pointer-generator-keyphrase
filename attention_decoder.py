@@ -74,7 +74,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       # title_encoder_states: batch_size x title_attn_length x title_attn_size
       # encoder_states: batch_size x attn_length x attn_size
       
-      score_matrix = math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(encoder_states, -1), [1, 1, title_attn_len]), W_t_c), 3) # batch_size x attn_length x title_attn_size
+      score_matrix = math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(encoder_states, -1), [1, 1, 1, title_attn_len]), W_t_c), 3) # batch_size x attn_length x title_attn_size
       for batch_index in range(batch_size):
         for i in range(attn_len):
           for j in range(title_attn_len):
