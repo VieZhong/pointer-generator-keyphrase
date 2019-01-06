@@ -55,9 +55,6 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     batch_size = encoder_states.get_shape()[0].value # if this line fails, it's because the batch size isn't defined
     attn_size = encoder_states.get_shape()[2].value # if this line fails, it's because the attention length isn't defined
 
-    # Reshape encoder_states (need to insert a dim)
-    encoder_states = tf.expand_dims(encoder_states, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
-
     # To calculate attention, we calculate
     #   v^T tanh(W_h h_i + W_s s_t + b_attn)
     # where h_i is an encoder state, and s_t a decoder state.
@@ -68,15 +65,6 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       attn_len = tf.shape(enc_padding_mask)[1]
     if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution:
       co_matrix = tf.slice(matrix, [0, 0, 0], [-1, attn_len, attn_len]) # shape (batch_size, attn_length, attn_length).
-
-    # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
-    W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
-    if FLAGS.attention_weighted and attention_weight is not None:
-      attn_weight = tf.tile(tf.expand_dims(tf.expand_dims(attention_weight, 2), 3), [1, 1, 1, attn_size])
-      weighted_encoder_states = attn_weight * encoder_states
-    else:
-      weighted_encoder_states = encoder_states
-    encoder_features = nn_ops.conv2d(weighted_encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
 
     if FLAGS.title_engaged:
 
@@ -105,6 +93,17 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       context_title_states = tf.expand_dims(context_title_states, axis=2) # batch_size x attn_length x 1 x title_attn_size
       W_e = variable_scope.get_variable("W_e", [1, 1, title_attn_size, attention_vec_size])
       title_features = nn_ops.conv2d(context_title_states, W_e, [1, 1, 1, 1], "SAME")
+
+    # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
+    W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
+    # Reshape encoder_states (need to insert a dim)
+    encoder_states = tf.expand_dims(encoder_states, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
+    if FLAGS.attention_weighted and attention_weight is not None:
+      attn_weight = tf.tile(tf.expand_dims(tf.expand_dims(attention_weight, 2), 3), [1, 1, 1, attn_size])
+      weighted_encoder_states = attn_weight * encoder_states
+    else:
+      weighted_encoder_states = encoder_states
+    encoder_features = nn_ops.conv2d(weighted_encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
 
     if FLAGS.co_occurrence:
       c_matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, max_enc_steps, 1, max_enc_steps)
