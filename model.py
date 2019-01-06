@@ -185,9 +185,9 @@ class SummarizationModel(object):
     title_encoder_states = self._title_states if hps.title_engaged else None
     title_padding_mask = self._title_padding_mask if hps.title_engaged else None
 
-    outputs, out_state, attn_dists, p_gens, coverage, title_features = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, attention_weight=attn_weight, emb_enc_inputs=emb_enc_inputs, prev_attention_dist=prev_attn_dist, tagger_matrix=tagger_matrix, title_encoder_states=title_encoder_states, title_padding_mask=title_padding_mask)
+    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, attention_weight=attn_weight, emb_enc_inputs=emb_enc_inputs, prev_attention_dist=prev_attn_dist, tagger_matrix=tagger_matrix, title_encoder_states=title_encoder_states, title_padding_mask=title_padding_mask)
 
-    return outputs, out_state, attn_dists, p_gens, coverage, title_features
+    return outputs, out_state, attn_dists, p_gens, coverage
 
   def _calc_final_dist(self, vocab_dists, attn_dists, init_attn=None):
     """Calculate the final distribution, for the pointer-generator model
@@ -318,7 +318,7 @@ class SummarizationModel(object):
 
       # Add the decoder.
       with tf.variable_scope('decoder'):
-        decoder_outputs, self._dec_out_state, self.attn_dists, self.p_gens, self.coverage, self.title_features = self._add_decoder(emb_dec_inputs, decoder_input_ids, emb_enc_inputs=(emb_enc_inputs if hps.target_siding_bridge else None))
+        decoder_outputs, self._dec_out_state, self.attn_dists, self.p_gens, self.coverage = self._add_decoder(emb_dec_inputs, decoder_input_ids, emb_enc_inputs=(emb_enc_inputs if hps.target_siding_bridge else None))
 
       # Add the output projection to obtain the vocabulary distribution
       with tf.variable_scope('output_projection'):
@@ -432,7 +432,6 @@ class SummarizationModel(object):
         'summaries': self._summaries,
         'loss': self._loss,
         'global_step': self.global_step,
-        'title_features': self.title_features
     }
     if self._hps.coverage:
       to_return['coverage_loss'] = self._coverage_loss
