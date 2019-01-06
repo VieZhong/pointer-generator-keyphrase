@@ -86,9 +86,13 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       #   score_matrix = math_ops.reduce_sum(tf.map_fn(lambda x: x * transpose_W_t_c, encoder_states[batch_index]), -1) # attn_length x title_attn_size
       #   score.append(math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(score_matrix, 1), [1, title_attn_len, 1]), title_encoder_states[batch_index]), -1))
 
-      score = nn_ops.conv2d(encoder_states, W_t_c, [1, 1, 1, 1], "SAME") # batch_size x attn_length x 1 x title_attn_size
+      score = []
+      score_matrix = nn_ops.conv2d(encoder_states, W_t_c, [1, 1, 1, 1], "SAME") # batch_size x attn_length x 1 x title_attn_size
+      score_matrix = tf.reshape(score_matrix, [-1, attn_len, title_attn_size]) # batch_size x attn_length x title_attn_size
+      for batch_index in range(batch_size):
+        score.append(math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(score_matrix[batch_size], 1), [1, title_attn_len, 1]), title_encoder_states[batch_index]), -1))      
 
-      title_attn_dist = nn_ops.softmax(tf.reshape(score, [-1, attn_len, title_attn_len])) # take softmax. shape (batch_size, attn_length, title_attn_length)
+      title_attn_dist = nn_ops.softmax(score) # take softmax. shape (batch_size, attn_length, title_attn_length)
       title_attn_dist *= tf.tile(tf.expand_dims(title_padding_mask, 1), [1, attn_len, 1]) # apply mask
       title_masked_sums = tf.reduce_sum(title_attn_dist, axis=2)
       title_attn_dist =  title_attn_dist / tf.reshape(title_masked_sums, [-1, attn_len, 1]) # re-normalize
