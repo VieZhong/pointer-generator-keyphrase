@@ -167,8 +167,8 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
             sum_features += matrix_features
           if FLAGS.tagger_attention:
             sum_features += tag_features
-          if FLAGS.title_engaged:
-            sum_features += title_features
+          # if FLAGS.title_engaged:
+          #   sum_features += title_features
 
           # Calculate v^T tanh(W_h h_i + W_s s_t + w_c c_i^t + b_attn)
           e = math_ops.reduce_sum(v * math_ops.tanh(sum_features), [2, 3])  # shape (batch_size,attn_length)
@@ -185,8 +185,8 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
             sum_features += matrix_features
           if FLAGS.tagger_attention:
             sum_features += tag_features
-          if FLAGS.title_engaged:
-            sum_features += title_features
+          # if FLAGS.title_engaged:
+          #   sum_features += title_features
           e = math_ops.reduce_sum(v * math_ops.tanh(sum_features), [2, 3]) # calculate e
 
           # Calculate attention distribution
