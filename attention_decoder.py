@@ -55,16 +55,18 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     batch_size = encoder_states.get_shape()[0].value # if this line fails, it's because the batch size isn't defined
     attn_size = encoder_states.get_shape()[2].value # if this line fails, it's because the attention length isn't defined
 
-    # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
-    W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
-    # Reshape encoder_states (need to insert a dim)
-    encoder_states = tf.expand_dims(encoder_states, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
     # To calculate attention, we calculate
     #   v^T tanh(W_h h_i + W_s s_t + b_attn)
     # where h_i is an encoder state, and s_t a decoder state.
     # attn_vec_size is the length of the vectors v, b_attn, (W_h h_i) and (W_s s_t).
     # We set it to be equal to the size of the encoder states.
     attention_vec_size = attn_size
+
+    # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
+    W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
+    # Reshape encoder_states (need to insert a dim)
+    encoder_states = tf.expand_dims(encoder_states, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
+
     if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution or FLAGS.coverage_weighted_expansion or FLAGS.title_engaged:
       attn_len = tf.shape(enc_padding_mask)[1]
     if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution:
