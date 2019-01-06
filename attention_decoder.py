@@ -90,7 +90,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       score_matrix = nn_ops.conv2d(encoder_states, W_t_c, [1, 1, 1, 1], "SAME") # batch_size x attn_length x 1 x title_attn_size
       score_matrix = tf.reshape(score_matrix, [-1, attn_len, title_attn_size]) # batch_size x attn_length x title_attn_size
       for batch_index in range(batch_size):
-        score.append(math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(score_matrix[batch_size], 1), [1, title_attn_len, 1]), title_encoder_states[batch_index]), -1))      
+        score.append(math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(score_matrix[batch_index], 1), [1, title_attn_len, 1]), title_encoder_states[batch_index]), -1))      
 
       title_attn_dist = nn_ops.softmax(score) # take softmax. shape (batch_size, attn_length, title_attn_length)
       title_attn_dist *= tf.tile(tf.expand_dims(title_padding_mask, 1), [1, attn_len, 1]) # apply mask
