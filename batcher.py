@@ -27,7 +27,7 @@ import data
 class Example(object):
   """Class representing a train/val/test example for text summarization."""
 
-  def __init__(self, article, tags, abstract_sentences, abstract_sentences_all, vocab, hps, stop_words):
+  def __init__(self, title, article, tags, abstract_sentences, abstract_sentences_all, vocab, hps, stop_words):
     """Initializes the Example, performing tokenization and truncation to produce the encoder, decoder and target sequences, which are stored in self.
 
     Args:
@@ -57,6 +57,11 @@ class Example(object):
     # Get the decoder input sequence and target sequence
     self.dec_input, self.target = self.get_dec_inp_targ_seqs(abs_ids, hps.max_dec_steps, start_decoding, stop_decoding)
     self.dec_len = len(self.dec_input)
+
+    if hps.title_engaged:
+      title_words = title.split()
+      self.title_input = [vocab.word2id(w) for w in title_words[:hps.max_title_len]]
+      self.title_len = len(self.title_input)
 
     # If using pointer-generator mode, we need to store some extra info
     if hps.pointer_gen:
@@ -121,6 +126,12 @@ class Example(object):
         self.enc_input_extend_vocab.append(pad_id)
 
 
+  def pad_title_input(self, max_len, pad_id):
+    """Pad the encoder input sequence with pad_id up to max_len."""
+    while len(self.title_input) < max_len:
+      self.title_input.append(pad_id)
+
+
 class Batch(object):
   """Class representing a minibatch of train/val/test examples for text summarization."""
 
@@ -156,16 +167,25 @@ class Batch(object):
     """
     # Determine the maximum length of the encoder input sequence in this batch
     max_enc_seq_len = max([ex.enc_len for ex in example_list])
+    if hps.title_engaged:
+      max_title_seq_len = max([ex.title_len for ex in example_list])
+
 
     # Pad the encoder input sequences up to the length of the longest sequence
     for ex in example_list:
       ex.pad_encoder_input(max_enc_seq_len, self.pad_id)
+      if hps.title_engaged:
+        ex.pad_title_input(max_title_seq_len, self.pad_id)
 
     # Initialize the numpy arrays
     # Note: our enc_batch can have different length (second dimension) for each batch because we use dynamic_rnn for the encoder.
     self.enc_batch = np.zeros((hps.batch_size, max_enc_seq_len), dtype=np.int32)
     self.enc_lens = np.zeros((hps.batch_size), dtype=np.int32)
     self.enc_padding_mask = np.zeros((hps.batch_size, max_enc_seq_len), dtype=np.float32)
+    if hps.title_engaged:
+      self.title_batch = np.zeros((hps.batch_size, max_title_seq_len), dtype=np.int32)
+      self.title_lens = np.zeros((hps.batch_size), dtype=np.int32)
+      self.title_padding_mask = np.zeros((hps.batch_size, max_title_seq_len), dtype=np.float32)
 
     # Fill in the numpy arrays
     for i, ex in enumerate(example_list):
@@ -173,6 +193,11 @@ class Batch(object):
       self.enc_lens[i] = ex.enc_len
       for j in range(ex.enc_len):
         self.enc_padding_mask[i][j] = 1
+      if hps.title_engaged:
+        self.title_batch[i, :] = ex.title_input[:]
+        self.title_lens[i] = ex.title_len
+        for j in range(ex.title_len):
+          self.title_padding_mask[i][j] = 1
 
     # For pointer-generator mode, need to store some extra info
     if hps.pointer_gen:
@@ -312,7 +337,7 @@ class Batcher(object):
 
     while True:
       try:
-        (article, abstract, tags) = next(input_gen) # read the next example from file. article and abstract are both strings.
+        (article, abstract, tags, title) = next(input_gen) # read the next example from file. article and abstract are both strings.
       except StopIteration: # if there are no more examples:
         tf.logging.info("The example generator for this example queue filling thread has exhausted data.")
         if self._single_pass:
@@ -327,7 +352,7 @@ class Batcher(object):
       for i in range(self._hps.max_keyphrase_num):
         sent = abstract_sentences_all[i % len(abstract_sentences_all)]
         abstract_sentences = [sent.strip()]
-        example = Example(article, tags, abstract_sentences, abstract_sentences_all, self._vocab, self._hps, self._stop_words) # Process into an Example.
+        example = Example(title, article, tags, abstract_sentences, abstract_sentences_all, self._vocab, self._hps, self._stop_words) # Process into an Example.
         self._example_queue.put(example) # place the Example in the example queue.
 
       # if self._hps.mode == "decode":
@@ -396,6 +421,12 @@ class Batcher(object):
       e = next(example_generator) # e is a tf.Example
       try:
         article_text = e.features.feature['article'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
+        if self._hps.title_engaged:
+          title_text = e.features.feature['title'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
+          article_text = title_text + ' ' + article_text
+          title_text = data.replace_number_to_string(title_text)
+        else:
+          title_text = None
         abstract_text = e.features.feature['keyword'].bytes_list.value[0].decode() # the abstract text was saved under the key 'abstract' in the data files
         if self._hps.tagger_attention or self._hps.tagger_encoding:
           article_tags = e.features.feature['tags'].bytes_list.value[0].decode()
@@ -408,4 +439,5 @@ class Batcher(object):
       if len(article_text)==0: # See https://github.com/abisee/pointer-generator/issues/1
         tf.logging.warning('Found an example with empty article text. Skipping it.')
       else:
-        yield (data.replace_number_to_string(article_text), data.replace_number_to_string(abstract_text), article_tags)
+
+        yield (data.replace_number_to_string(article_text), data.replace_number_to_string(abstract_text), article_tags, title_text)

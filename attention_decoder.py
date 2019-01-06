@@ -27,7 +27,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # Note: this function is based on tf.contrib.legacy_seq2seq_attention_decoder, which is now outdated.
 # In the future, it would make more sense to write variants on the attention mechanism using the new seq2seq library for tensorflow 1.0: https://www.tensorflow.org/api_guides/python/contrib.seq2seq#Attention
-def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None, attention_weight=None, emb_enc_inputs=None, prev_attention_dist=None, tagger_matrix=None):
+def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding_mask, cell, initial_state_attention=False, pointer_gen=True, use_coverage=False, prev_coverage=None, matrix=None, enc_batch_extend_vocab=None, decoder_input_ids=None, attention_weight=None, emb_enc_inputs=None, prev_attention_dist=None, tagger_matrix=None, title_encoder_states=None, title_padding_mask=None):
   """
   Args:
     decoder_inputs: A list of 2D Tensors [batch_size x input_size].
@@ -64,7 +64,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     # attn_vec_size is the length of the vectors v, b_attn, (W_h h_i) and (W_s s_t).
     # We set it to be equal to the size of the encoder states.
     attention_vec_size = attn_size
-    if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution or FLAGS.coverage_weighted_expansion:
+    if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution or FLAGS.coverage_weighted_expansion or FLAGS.title_engaged:
       attn_len = tf.shape(enc_padding_mask)[1]
     if FLAGS.co_occurrence_h or FLAGS.markov_attention_contribution:
       co_matrix = tf.slice(matrix, [0, 0, 0], [-1, attn_len, attn_len]) # shape (batch_size, attn_length, attn_length).
@@ -77,6 +77,34 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     else:
       weighted_encoder_states = encoder_states
     encoder_features = nn_ops.conv2d(weighted_encoder_states, W_h, [1, 1, 1, 1], "SAME") # shape (batch_size,attn_length,1,attention_vec_size)
+
+    if FLAGS.title_engaged:
+      W_e = variable_scope.get_variable("W_e", [1, 1, title_attn_size, attention_vec_size])
+
+      # title_attn_dist= ??
+      title_attn_size = title_encoder_states.get_shape()[2].value
+      title_attn_len = tf.shape(title_encoder_states)[1]
+      W_t_c = variable_scope.get_variable("W_t_c", [attn_size, title_attn_size])
+      # title_encoder_states: batch_size x title_attn_length x title_attn_size
+      # encoder_states: batch_size x attn_length x attn_size
+      score_matrix = math_ops.reduce_sum(tf.multiply(tf.tile(encoder_states, [1, 1, title_attn_len]), W_t_c), 3) # batch_size x attn_length x title_attn_size
+      for batch_index in range(batch_size):
+        for i in range(attn_len):
+          for j in range(title_attn_len):
+            score[batch_index][i][j] = math_ops.reduce_sum(tf.multiply(score_matrix[batch_index][i], title_encoder_states[batch_index][j]))
+
+
+      title_attn_dist = nn_ops.softmax(score) # take softmax. shape (batch_size, attn_length, title_attn_length)
+      title_attn_dist *= title_padding_mask # apply mask
+      title_masked_sums = tf.reduce_sum(title_attn_dist, axis=2) # shape (batch_size, attn_length)
+      title_attn_dist =  title_attn_dist / tf.reshape(title_masked_sums, [-1, attn_len, 1]) # re-normalize
+
+      context_title_states =[] # batch_size x attn_length x title_attn_size
+      for batch_index in range(batch_size):
+        context_title_state = tf.tile(tf.expand_dims(title_attn_dist[batch_index], -1), [1, 1, title_attn_size])  * title_encoder_states[batch_index] # attn_length x title_attn_length x title_attn_size
+        context_title_states.push(math_ops.reduce_sum(context_title_state, 1))
+      context_title_states = tf.expand_dims(context_title_states, axis=2) # batch_size x attn_length x 1 x title_attn_size
+      title_features = nn_ops.conv2d(context_title_states, W_e, [1, 1, 1, 1], "SAME")
 
     if FLAGS.co_occurrence:
       c_matrix = tf.expand_dims(matrix, axis=2) # now is shape (batch_size, max_enc_steps, 1, max_enc_steps)
@@ -141,6 +169,8 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
             sum_features += matrix_features
           if FLAGS.tagger_attention:
             sum_features += tag_features
+          if FLAGS.title_engaged:
+            sum_features += title_features
 
           # Calculate v^T tanh(W_h h_i + W_s s_t + w_c c_i^t + b_attn)
           e = math_ops.reduce_sum(v * math_ops.tanh(sum_features), [2, 3])  # shape (batch_size,attn_length)

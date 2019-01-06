@@ -91,7 +91,7 @@ def run_beam_search(sess, model, vocab, batch):
     best_hyp: Hypothesis object; the best hypothesis found by beam search.
   """
   # Run the encoder to get the encoder hidden states and decoder initial state
-  enc_states, dec_in_state = model.run_encoder(sess, batch)
+  enc_states, dec_in_state, title_states = model.run_encoder(sess, batch)
   # dec_in_state is a LSTMStateTuple
   # enc_states has shape [batch_size, <=max_enc_steps, 2*hidden_dim].
 
@@ -121,7 +121,8 @@ def run_beam_search(sess, model, vocab, batch):
                         enc_states=enc_states,
                         dec_init_states=states,
                         prev_coverage=prev_coverage,
-                        prev_attn_dist=prev_attn_dist)
+                        prev_attn_dist=prev_attn_dist,
+                        title_states=title_states)
 
     # Extend each hypothesis and collect them all in all_hyps
     all_hyps = []

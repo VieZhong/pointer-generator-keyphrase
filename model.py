@@ -41,6 +41,11 @@ class SummarizationModel(object):
     self._enc_batch = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch')
     self._enc_lens = tf.placeholder(tf.int32, [hps.batch_size], name='enc_lens')
     self._enc_padding_mask = tf.placeholder(tf.float32, [hps.batch_size, None], name='enc_padding_mask')
+    if title_engaged:
+      self._title_batch = tf.placeholder(tf.int32, [hps.batch_size, None], name='title_batch')
+      self._title_lens = tf.placeholder(tf.int32, [hps.batch_size], name='title_lens')
+      self._title_padding_mask = tf.placeholder(tf.float32, [hps.batch_size, None], name='title_padding_mask')
+      
     if hps.pointer_gen:
       self._enc_batch_extend_vocab = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch_extend_vocab')
       self._max_art_oovs = tf.placeholder(tf.int32, [], name='max_art_oovs')
@@ -71,6 +76,10 @@ class SummarizationModel(object):
     feed_dict[self._enc_batch] = batch.enc_batch
     feed_dict[self._enc_lens] = batch.enc_lens
     feed_dict[self._enc_padding_mask] = batch.enc_padding_mask
+    if FLAGS.title_engaged:
+      feed_dict[self._title_batch] = batch.title_batch
+      feed_dict[self._title_lens] = batch.title_lens
+      feed_dict[self._title_padding_mask] = batch.title_padding_mask
     if FLAGS.pointer_gen:
       feed_dict[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed_dict[self._max_art_oovs] = batch.max_art_oovs
@@ -86,7 +95,7 @@ class SummarizationModel(object):
       feed_dict[self._dec_padding_mask] = batch.dec_padding_mask
     return feed_dict
 
-  def _add_encoder(self, encoder_inputs, seq_len):
+  def _add_encoder(self, encoder_inputs, seq_len, variable_scope_name="encoder"):
     """Add a single-layer bidirectional LSTM encoder to the graph.
 
     Args:
@@ -99,7 +108,7 @@ class SummarizationModel(object):
       fw_state, bw_state:
         Each are LSTMStateTuples of shape ([batch_size,hidden_dim],[batch_size,hidden_dim])
     """
-    with tf.variable_scope('encoder'):
+    with tf.variable_scope(variable_scope_name):
       if self._hps.cell_type == 'GRU':
         cell_fw = tf.contrib.rnn.GRUCell(self._hps.hidden_dim, kernel_initializer=self.rand_unif_init)
         cell_bw = tf.contrib.rnn.GRUCell(self._hps.hidden_dim, kernel_initializer=self.rand_unif_init)
@@ -173,8 +182,10 @@ class SummarizationModel(object):
     enc_batch_extend_vocab = self._enc_batch_extend_vocab if hps.co_occurrence_h else None
     attn_weight = self._cooccurrence_weight if hps.attention_weighted or (hps.coverage and hps.coverage_weighted) or hps.markov_attention_contribution else None
     tagger_matrix = self._tagger_matrix if hps.tagger_attention else None
+    title_encoder_states = self._title_states if hps.title_engaged else None
+    title_padding_mask = self._title_padding_mask if hps.title_engaged else None
 
-    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, attention_weight=attn_weight, emb_enc_inputs=emb_enc_inputs, prev_attention_dist=prev_attn_dist, tagger_matrix=tagger_matrix)
+    outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, attention_weight=attn_weight, emb_enc_inputs=emb_enc_inputs, prev_attention_dist=prev_attn_dist, tagger_matrix=tagger_matrix, title_encoder_states=title_encoder_states, title_padding_mask=title_padding_mask)
 
     return outputs, out_state, attn_dists, p_gens, coverage
 
@@ -299,6 +310,11 @@ class SummarizationModel(object):
         self._enc_states = enc_outputs
       # Our encoder is bidirectional and our decoder is unidirectional so we need to reduce the final encoder hidden state to the right size to be the initial decoder hidden state
         self._dec_in_state = self._reduce_states(fw_st, bw_st)
+
+      if hps.title_engaged:
+        emb_title_inputs = tf.nn.embedding_lookup(embedding, self._title_batch)
+        title_enc_outputs, _, _ = self._add_encoder(emb_title_inputs, self._title_lens, "title_encoder")
+        self._title_states = title_enc_outputs
 
       # Add the decoder.
       with tf.variable_scope('decoder'):
@@ -445,7 +461,7 @@ class SummarizationModel(object):
       dec_in_state: A LSTMStateTuple of shape ([1,hidden_dim],[1,hidden_dim])
     """
     feed_dict = self._make_feed_dict(batch, just_enc=True) # feed the batch into the placeholders
-    (enc_states, dec_in_state, global_step) = sess.run([self._enc_states, self._dec_in_state, self.global_step], feed_dict) # run the encoder
+    (enc_states, dec_in_state, global_step, title_states) = sess.run([self._enc_states, self._dec_in_state, self.global_step, self._title_states], feed_dict) # run the encoder
 
     # dec_in_state is LSTMStateTuple shape ([batch_size,hidden_dim],[batch_size,hidden_dim])
     # Given that the batch is a single example repeated, dec_in_state is identical across the batch so we just take the top row.
@@ -453,9 +469,9 @@ class SummarizationModel(object):
       dec_in_state = dec_in_state[0]
     else:
       dec_in_state = tf.contrib.rnn.LSTMStateTuple(dec_in_state.c[0], dec_in_state.h[0])
-    return enc_states, dec_in_state
+    return enc_states, dec_in_state, title_states
 
-  def decode_onestep(self, sess, batch, latest_tokens, enc_states, dec_init_states, prev_coverage, prev_attn_dist=None):
+  def decode_onestep(self, sess, batch, latest_tokens, enc_states, dec_init_states, prev_coverage, prev_attn_dist=None, title_states=None):
     """For beam search decoding. Run the decoder for one step.
 
     Args:
@@ -502,6 +518,10 @@ class SummarizationModel(object):
       "states": self._dec_out_state,
       "attn_dists": self.attn_dists
     }
+
+    if hps.title_engaged:
+      feed[self._title_padding_mask] = batch.title_padding_mask
+      feed[self._title_states] = title_states
 
     if hps.pointer_gen:
       feed[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
