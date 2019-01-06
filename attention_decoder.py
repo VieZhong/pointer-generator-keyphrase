@@ -55,6 +55,10 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     batch_size = encoder_states.get_shape()[0].value # if this line fails, it's because the batch size isn't defined
     attn_size = encoder_states.get_shape()[2].value # if this line fails, it's because the attention length isn't defined
 
+    # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
+    W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
+    # Reshape encoder_states (need to insert a dim)
+    encoder_states = tf.expand_dims(encoder_states, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
     # To calculate attention, we calculate
     #   v^T tanh(W_h h_i + W_s s_t + b_attn)
     # where h_i is an encoder state, and s_t a decoder state.
@@ -70,7 +74,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
 
       title_attn_size = title_encoder_states.get_shape()[2].value
       title_attn_len = tf.shape(title_encoder_states)[1]
-      W_t_c = variable_scope.get_variable("W_t_c", [1, attn_size, title_attn_size])
+      W_t_c = variable_scope.get_variable("W_t_c", [1, 1, attn_size, title_attn_size])
       # transpose_W_t_c = tf.transpose(W_t_c)
       # title_encoder_states: batch_size x title_attn_length x title_attn_size
       # encoder_states: batch_size x attn_length x attn_size
@@ -80,9 +84,9 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       #   score_matrix = math_ops.reduce_sum(tf.map_fn(lambda x: x * transpose_W_t_c, encoder_states[batch_index]), -1) # attn_length x title_attn_size
       #   score.append(math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(score_matrix, 1), [1, title_attn_len, 1]), title_encoder_states[batch_index]), -1))
 
-      score = nn_ops.conv2d(encoder_states, W_t_c, [1, 1, 1], "SAME") # batch_size x attn_length x title_attn_size
+      score = nn_ops.conv2d(encoder_states, W_t_c, [1, 1, 1, 1], "SAME") # batch_size x attn_length x 1 x title_attn_size
 
-      title_attn_dist = nn_ops.softmax(score) # take softmax. shape (batch_size, attn_length, title_attn_length)
+      title_attn_dist = nn_ops.softmax(tf.reshape(score, [-1, attn_len, title_attn_len])) # take softmax. shape (batch_size, attn_length, title_attn_length)
       title_attn_dist *= tf.tile(tf.expand_dims(title_padding_mask, 1), [1, attn_len, 1]) # apply mask
       title_masked_sums = tf.reduce_sum(title_attn_dist, axis=2)
       title_attn_dist =  title_attn_dist / tf.reshape(title_masked_sums, [-1, attn_len, 1]) # re-normalize
@@ -96,10 +100,6 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       W_e = variable_scope.get_variable("W_e", [1, 1, title_attn_size, attention_vec_size])
       title_features = nn_ops.conv2d(context_title_states, W_e, [1, 1, 1, 1], "SAME")
 
-    # Get the weight matrix W_h and apply it to each encoder state to get (W_h h_i), the encoder features
-    W_h = variable_scope.get_variable("W_h", [1, 1, attn_size, attention_vec_size])
-    # Reshape encoder_states (need to insert a dim)
-    encoder_states = tf.expand_dims(encoder_states, axis=2) # now is shape (batch_size, attn_len, 1, attn_size)
     if FLAGS.attention_weighted and attention_weight is not None:
       attn_weight = tf.tile(tf.expand_dims(tf.expand_dims(attention_weight, 2), 3), [1, 1, 1, attn_size])
       weighted_encoder_states = attn_weight * encoder_states
