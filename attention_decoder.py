@@ -77,7 +77,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       score_matrix = math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(encoder_states, -1), [1, 1, 1, title_attn_len]), W_t_c), 3) # batch_size x attn_length x title_attn_size
       score = [] # batch_size x attn_length x title_attn_length
       for batch_index in range(batch_size):
-        score.push(math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(score_matrix[batch_index], 1), [1, title_attn_len, 1]), title_encoder_states[batch_index])))
+        score.append(math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(score_matrix[batch_index], 1), [1, title_attn_len, 1]), title_encoder_states[batch_index])))
 
 
       title_attn_dist = nn_ops.softmax(score) # take softmax. shape (batch_size, attn_length, title_attn_length)
@@ -88,7 +88,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       context_title_states =[] # batch_size x attn_length x title_attn_size
       for batch_index in range(batch_size):
         context_title_state = tf.tile(tf.expand_dims(title_attn_dist[batch_index], -1), [1, 1, title_attn_size])  * title_encoder_states[batch_index] # attn_length x title_attn_length x title_attn_size
-        context_title_states.push(math_ops.reduce_sum(context_title_state, 1))
+        context_title_states.append(math_ops.reduce_sum(context_title_state, 1))
       context_title_states = tf.expand_dims(context_title_states, axis=2) # batch_size x attn_length x 1 x title_attn_size
       W_e = variable_scope.get_variable("W_e", [1, 1, title_attn_size, attention_vec_size])
       title_features = nn_ops.conv2d(context_title_states, W_e, [1, 1, 1, 1], "SAME")
