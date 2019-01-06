@@ -75,9 +75,9 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       # encoder_states: batch_size x attn_length x attn_size
       
       score_matrix = math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(encoder_states, -1), [1, 1, 1, title_attn_len]), W_t_c), 3) # batch_size x attn_length x title_attn_size
-      score = []
+      score = [] # batch_size x attn_length x title_attn_length
       for batch_index in range(batch_size):
-        score[batch_index] = math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(score_matrix[batch_index], 1), [1, title_attn_len, 1]), title_encoder_states[batch_index]))
+        score.push(math_ops.reduce_sum(tf.multiply(tf.tile(tf.expand_dims(score_matrix[batch_index], 1), [1, title_attn_len, 1]), title_encoder_states[batch_index])))
 
 
       title_attn_dist = nn_ops.softmax(score) # take softmax. shape (batch_size, attn_length, title_attn_length)
