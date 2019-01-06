@@ -41,7 +41,7 @@ class SummarizationModel(object):
     self._enc_batch = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch')
     self._enc_lens = tf.placeholder(tf.int32, [hps.batch_size], name='enc_lens')
     self._enc_padding_mask = tf.placeholder(tf.float32, [hps.batch_size, None], name='enc_padding_mask')
-    if title_engaged:
+    if hps.title_engaged:
       self._title_batch = tf.placeholder(tf.int32, [hps.batch_size, None], name='title_batch')
       self._title_lens = tf.placeholder(tf.int32, [hps.batch_size], name='title_lens')
       self._title_padding_mask = tf.placeholder(tf.float32, [hps.batch_size, None], name='title_padding_mask')
