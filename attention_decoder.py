@@ -41,7 +41,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     use_coverage: boolean. If True, use coverage mechanism.
     prev_coverage:
       If not None, a tensor with shape (batch_size, attn_length). The previous step's coverage vector. This is only not None in decode mode when using coverage.
-
+    title_encoder_states: batch_size x title_attn_length x title_attn_size
   Returns:
     outputs: A list of the same length as decoder_inputs of 2D Tensors of
       shape [batch_size x cell.output_size]. The output vectors.
@@ -77,9 +77,6 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       title_attn_size = title_encoder_states.get_shape()[2].value
       title_attn_len = tf.shape(title_encoder_states)[1]
       W_t_c = variable_scope.get_variable("W_t_c", [1, 1, attn_size, title_attn_size])
-      # transpose_W_t_c = tf.transpose(W_t_c)
-      # title_encoder_states: batch_size x title_attn_length x title_attn_size
-      # encoder_states: batch_size x attn_length x attn_size
       
       score = [] # batch_size x attn_length x title_attn_length
       score_matrix = nn_ops.conv2d(encoder_states, W_t_c, [1, 1, 1, 1], "SAME") # batch_size x attn_length x 1 x title_attn_size
@@ -97,7 +94,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
         # transpose_title_encoder_state = tf.transpose(title_encoder_states[batch_index])
         # context_title_state = tf.map_fn(lambda x: x * transpose_title_encoder_state, title_attn_dist[batch_index]) # attn_length x title_attn_size x title_attn_length
         context_title_state = tf.tile(tf.expand_dims(title_attn_dist[batch_index], -1), [1, 1, title_attn_size]) * title_encoder_states[batch_index] # attn_length x title_attn_length x title_attn_size
-        context_title_states.append(math_ops.reduce_sum(context_title_state, -1)) # attn_length x title_attn_size
+        context_title_states.append(math_ops.reduce_sum(context_title_state, 1)) # attn_length x title_attn_size
       context_title_states = tf.expand_dims(context_title_states, axis=2) # batch_size x attn_length x 1 x title_attn_size
       W_e = variable_scope.get_variable("W_e", [1, 1, title_attn_size, attention_vec_size])
       title_features = nn_ops.conv2d(context_title_states, W_e, [1, 1, 1, 1], "SAME")
