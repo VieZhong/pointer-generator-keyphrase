@@ -58,7 +58,7 @@ class Example(object):
     self.dec_input, self.target = self.get_dec_inp_targ_seqs(abs_ids, hps.max_dec_steps, start_decoding, stop_decoding)
     self.dec_len = len(self.dec_input)
 
-    if hps.title_engaged:
+    if hps.title_engaged or hps.title_guided:
       title_words = title.split()
       self.title_input = [vocab.word2id(w) for w in title_words[:hps.max_title_len]]
       self.title_len = len(self.title_input)
@@ -167,14 +167,14 @@ class Batch(object):
     """
     # Determine the maximum length of the encoder input sequence in this batch
     max_enc_seq_len = max([ex.enc_len for ex in example_list])
-    if hps.title_engaged:
+    if hps.title_engaged or hps.title_guided:
       max_title_seq_len = max([ex.title_len for ex in example_list])
 
 
     # Pad the encoder input sequences up to the length of the longest sequence
     for ex in example_list:
       ex.pad_encoder_input(max_enc_seq_len, self.pad_id)
-      if hps.title_engaged:
+      if hps.title_engaged or hps.title_guided:
         ex.pad_title_input(max_title_seq_len, self.pad_id)
 
     # Initialize the numpy arrays
@@ -182,7 +182,7 @@ class Batch(object):
     self.enc_batch = np.zeros((hps.batch_size, max_enc_seq_len), dtype=np.int32)
     self.enc_lens = np.zeros((hps.batch_size), dtype=np.int32)
     self.enc_padding_mask = np.zeros((hps.batch_size, max_enc_seq_len), dtype=np.float32)
-    if hps.title_engaged:
+    if hps.title_engaged or hps.title_guided:
       self.title_batch = np.zeros((hps.batch_size, max_title_seq_len), dtype=np.int32)
       self.title_lens = np.zeros((hps.batch_size), dtype=np.int32)
       self.title_padding_mask = np.zeros((hps.batch_size, max_title_seq_len), dtype=np.float32)
@@ -193,7 +193,7 @@ class Batch(object):
       self.enc_lens[i] = ex.enc_len
       for j in range(ex.enc_len):
         self.enc_padding_mask[i][j] = 1
-      if hps.title_engaged:
+      if hps.title_engaged or hps.title_guided:
         self.title_batch[i, :] = ex.title_input[:]
         self.title_lens[i] = ex.title_len
         for j in range(ex.title_len):
@@ -421,7 +421,7 @@ class Batcher(object):
       e = next(example_generator) # e is a tf.Example
       try:
         article_text = e.features.feature['article'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
-        if self._hps.title_engaged:
+        if self._hps.title_engaged or self._hps.title_guided:
           title_text = e.features.feature['title'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
           article_text = title_text + ' ' + article_text
           title_text = data.replace_number_to_string(title_text)

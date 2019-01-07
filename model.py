@@ -41,7 +41,7 @@ class SummarizationModel(object):
     self._enc_batch = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch')
     self._enc_lens = tf.placeholder(tf.int32, [hps.batch_size], name='enc_lens')
     self._enc_padding_mask = tf.placeholder(tf.float32, [hps.batch_size, None], name='enc_padding_mask')
-    if hps.title_engaged:
+    if hps.title_engaged or hps.title_guided:
       self._title_batch = tf.placeholder(tf.int32, [hps.batch_size, None], name='title_batch')
       self._title_lens = tf.placeholder(tf.int32, [hps.batch_size], name='title_lens')
       self._title_padding_mask = tf.placeholder(tf.float32, [hps.batch_size, None], name='title_padding_mask')
@@ -76,7 +76,7 @@ class SummarizationModel(object):
     feed_dict[self._enc_batch] = batch.enc_batch
     feed_dict[self._enc_lens] = batch.enc_lens
     feed_dict[self._enc_padding_mask] = batch.enc_padding_mask
-    if FLAGS.title_engaged:
+    if FLAGS.title_engaged or FLAGS.title_guided:
       feed_dict[self._title_batch] = batch.title_batch
       feed_dict[self._title_lens] = batch.title_lens
       feed_dict[self._title_padding_mask] = batch.title_padding_mask
@@ -95,7 +95,7 @@ class SummarizationModel(object):
       feed_dict[self._dec_padding_mask] = batch.dec_padding_mask
     return feed_dict
 
-  def _add_encoder(self, encoder_inputs, seq_len, variable_scope_name="encoder"):
+  def _add_encoder(self, encoder_inputs, seq_len, variable_scope_name="encoder", enc_outputs=None):
     """Add a single-layer bidirectional LSTM encoder to the graph.
 
     Args:
@@ -121,6 +121,9 @@ class SummarizationModel(object):
 
       (encoder_outputs, (fw_st, bw_st)) = tf.nn.bidirectional_dynamic_rnn(cell_fw, cell_bw, encoder_inputs, dtype=tf.float32, sequence_length=seq_len, swap_memory=True)
       encoder_outputs = tf.concat(axis=2, values=encoder_outputs) # concatenate the forwards and backwards states
+      if enc_outputs is not None:
+        encoder_outputs = 0.5 * enc_outputs + 0.5 * encoder_outputs
+
       if self._hps.source_siding_bridge:
         encoder_outputs = tf.concat(axis=2, values=[encoder_outputs, encoder_inputs])
       return encoder_outputs, fw_st, bw_st
@@ -182,8 +185,8 @@ class SummarizationModel(object):
     enc_batch_extend_vocab = self._enc_batch_extend_vocab if hps.co_occurrence_h else None
     attn_weight = self._cooccurrence_weight if hps.attention_weighted or (hps.coverage and hps.coverage_weighted) or hps.markov_attention_contribution else None
     tagger_matrix = self._tagger_matrix if hps.tagger_attention else None
-    title_encoder_states = self._title_states if hps.title_engaged else None
-    title_padding_mask = self._title_padding_mask if hps.title_engaged else None
+    title_encoder_states = self._title_states if hps.title_engaged or hps.title_guided else None
+    title_padding_mask = self._title_padding_mask if hps.title_engaged or hps.title_guided else None
 
     outputs, out_state, attn_dists, p_gens, coverage = attention_decoder(inputs, self._dec_in_state, self._enc_states, self._enc_padding_mask, cell, initial_state_attention=(hps.mode=="decode"), pointer_gen=hps.pointer_gen, use_coverage=hps.coverage, prev_coverage=prev_coverage, matrix=co_matrix, enc_batch_extend_vocab=enc_batch_extend_vocab, decoder_input_ids=decoder_input_ids, attention_weight=attn_weight, emb_enc_inputs=emb_enc_inputs, prev_attention_dist=prev_attn_dist, tagger_matrix=tagger_matrix, title_encoder_states=title_encoder_states, title_padding_mask=title_padding_mask)
 
@@ -279,6 +282,10 @@ class SummarizationModel(object):
     embedding.metadata_path = vocab_metadata_path
     projector.visualize_embeddings(summary_writer, config)
 
+  def _add_matching_layer(self, enc_states):
+    context_title_states = attention_decoder(None, None, enc_states, title_encoder_states=self._title_states, title_padding_mask=self._title_padding_mask, match_layer=True)
+    return context_title_states    
+
   def _add_seq2seq(self):
     """Add the whole sequence-to-sequence model to the graph."""
     hps = self._hps
@@ -307,15 +314,21 @@ class SummarizationModel(object):
 
       # Add the encoder.
         enc_outputs, fw_st, bw_st = self._add_encoder(emb_enc_inputs, self._enc_lens)
-        self._enc_states = enc_outputs
-      # Our encoder is bidirectional and our decoder is unidirectional so we need to reduce the final encoder hidden state to the right size to be the initial decoder hidden state
-        self._dec_in_state = self._reduce_states(fw_st, bw_st)
 
-      if hps.title_engaged:
+      if hps.title_engaged or hps.title_guided:
         emb_title_inputs = tf.nn.embedding_lookup(embedding, self._title_batch)
         title_enc_outputs, _, _ = self._add_encoder(emb_title_inputs, self._title_lens, "title_encoder")
         self._title_states = title_enc_outputs
 
+      if hps.title_guided:
+        with tf.variable_scope('merging_layer'):
+          context_title_states = self._add_matching_layer(enc_outputs)
+          emb_mrg_inputs = tf.concat([enc_outputs, context_title_states], 2)
+          enc_outputs, fw_st, bw_st = self._add_encoder(emb_mrg_inputs, self._enc_lens, "merging_layer_encoder", enc_outputs)
+
+      self._enc_states = enc_outputs
+      # Our encoder is bidirectional and our decoder is unidirectional so we need to reduce the final encoder hidden state to the right size to be the initial decoder hidden state
+      self._dec_in_state = self._reduce_states(fw_st, bw_st)
       # Add the decoder.
       with tf.variable_scope('decoder'):
         decoder_outputs, self._dec_out_state, self.attn_dists, self.p_gens, self.coverage = self._add_decoder(emb_dec_inputs, decoder_input_ids, emb_enc_inputs=(emb_enc_inputs if hps.target_siding_bridge else None))
@@ -519,7 +532,7 @@ class SummarizationModel(object):
       "attn_dists": self.attn_dists
     }
 
-    if hps.title_engaged:
+    if hps.title_engaged or hps.title_guided:
       feed[self._title_padding_mask] = batch.title_padding_mask
       feed[self._title_states] = title_states
 
