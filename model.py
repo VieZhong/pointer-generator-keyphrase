@@ -474,7 +474,7 @@ class SummarizationModel(object):
       dec_in_state: A LSTMStateTuple of shape ([1,hidden_dim],[1,hidden_dim])
     """
     feed_dict = self._make_feed_dict(batch, just_enc=True) # feed the batch into the placeholders
-    if hps.title_engaged:
+    if self._hps.title_engaged:
       (enc_states, dec_in_state, global_step, title_states) = sess.run([self._enc_states, self._dec_in_state, self.global_step, self._title_states], feed_dict) # run the encoder
     else:
       (enc_states, dec_in_state, global_step) = sess.run([self._enc_states, self._dec_in_state, self.global_step], feed_dict) # run the encoder
