@@ -263,10 +263,11 @@ def get_f1_score(ref_words, dec_words, stemmer):
   if total_ref < 1 or total_dec < 1:
     return 0
 
+  num = min(FLAGS.max_keyphrase_num, total_ref, total_dec)
   num_overlap = 0
   if FLAGS.language == 'english':
-    dec_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in dec_words[:FLAGS.max_keyphrase_num]]
-    ref_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in ref_words[:FLAGS.max_keyphrase_num]]
+    dec_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in dec_words[:num]]
+    ref_stem_words = [' '.join(stemmer.stemWords(w.split())) for w in ref_words[:num]]
     for d_words in dec_stem_words:
       d_words = d_words.split()
       is_overlap = False
@@ -287,8 +288,8 @@ def get_f1_score(ref_words, dec_words, stemmer):
     if num_overlap < 1:
       return 0
   else:
-    dec_stem_words = [''.join(w.split()) for w in dec_words[:FLAGS.max_keyphrase_num]]
-    ref_stem_words = [''.join(w.split()) for w in ref_words[:FLAGS.max_keyphrase_num]]
+    dec_stem_words = [''.join(w.split()) for w in dec_words[:num]]
+    ref_stem_words = [''.join(w.split()) for w in ref_words[:num]]
     for d_words in dec_stem_words:
       is_overlap = False
       for r_words in ref_stem_words:
