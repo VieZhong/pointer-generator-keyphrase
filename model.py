@@ -461,8 +461,11 @@ class SummarizationModel(object):
       dec_in_state: A LSTMStateTuple of shape ([1,hidden_dim],[1,hidden_dim])
     """
     feed_dict = self._make_feed_dict(batch, just_enc=True) # feed the batch into the placeholders
-    (enc_states, dec_in_state, global_step, title_states) = sess.run([self._enc_states, self._dec_in_state, self.global_step, self._title_states], feed_dict) # run the encoder
-
+    if hps.title_engaged:
+      (enc_states, dec_in_state, global_step, title_states) = sess.run([self._enc_states, self._dec_in_state, self.global_step, self._title_states], feed_dict) # run the encoder
+    else:
+      (enc_states, dec_in_state, global_step) = sess.run([self._enc_states, self._dec_in_state, self.global_step], feed_dict) # run the encoder
+      title_states = None
     # dec_in_state is LSTMStateTuple shape ([batch_size,hidden_dim],[batch_size,hidden_dim])
     # Given that the batch is a single example repeated, dec_in_state is identical across the batch so we just take the top row.
     if self._hps.cell_type == "GRU":
