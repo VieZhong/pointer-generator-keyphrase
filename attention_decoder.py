@@ -203,9 +203,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
             coverage = tf.expand_dims(tf.expand_dims(attn_dist, 2), 2) # initialize coverage
 
         # Calculate the context vector from attn_dist and encoder_states
-        if not FLAGS.co_occurrence_h or input_ids == None: 
-          context_vector = math_ops.reduce_sum(array_ops.reshape(attn_dist, [batch_size, -1, 1, 1]) * encoder_states, [1, 2]) # shape (batch_size, attn_size).
-        else:
+        if FLAGS.co_occurrence_h and input_ids is not None: 
           p_oc = tf.get_variable("p_oc", [1], initializer=tf.constant_initializer(0.2))
           p_dist = []
           for j in range(FLAGS.batch_size):
@@ -216,6 +214,8 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
             d = tf.cond(tf.shape(t)[0] > 0, lambda: m[t[0][0]], lambda: tf.zeros([attn_len]))
             p_dist.append(d)
           context_vector = math_ops.reduce_sum(array_ops.reshape((p_oc *  p_dist + (1 - p_oc) * attn_dist), [batch_size, -1, 1, 1]) * encoder_states, [1, 2]) # shape (batch_size, attn_size).
+        else:
+          context_vector = math_ops.reduce_sum(array_ops.reshape(attn_dist, [batch_size, -1, 1, 1]) * encoder_states, [1, 2]) # shape (batch_size, attn_size).
         context_vector = array_ops.reshape(context_vector, [-1, attn_size])
 
       return context_vector, attn_dist, coverage
