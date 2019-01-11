@@ -229,7 +229,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
     context_vector.set_shape([None, attn_size])  # Ensure the second shape of attention vectors is set.
     if initial_state_attention: # true in decode mode
       # Re-calculate the context vector from the previous step so that we can pass it through a linear layer with this step's input to get a modified version of the input
-      context_vector, _, coverage = attention(initial_state, coverage) # in decode mode, this is what updates the coverage vector
+      context_vector, _, coverage = attention(initial_state, coverage, decoder_input_ids[0] if FLAGS.co_occurrence_h else None) # in decode mode, this is what updates the coverage vector
     for i, inp in enumerate(decoder_inputs):
       tf.logging.info("Adding attention_decoder timestep %i of %i", i, len(decoder_inputs))
       if i > 0:
@@ -247,7 +247,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
       # Run the attention mechanism.
       if i == 0 and initial_state_attention:  # always true in decode mode
         with variable_scope.variable_scope(variable_scope.get_variable_scope(), reuse=True): # you need this because you've already run the initial attention(...) call
-          context_vector, attn_dist, _ = attention(state, coverage) # don't allow coverage to update
+          context_vector, attn_dist, _ = attention(state, coverage, decoder_input_ids[i] if FLAGS.co_occurrence_h else None) # don't allow coverage to update
       else:
         if not FLAGS.co_occurrence_h:
           context_vector, attn_dist, coverage = attention(state, coverage)
