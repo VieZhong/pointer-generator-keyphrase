@@ -211,7 +211,7 @@ def attention_decoder(decoder_inputs, initial_state, encoder_states, enc_padding
             vb = enc_batch_extend_vocab[j]
             xj = input_ids[j]
             t = tf.where(tf.equal(vb, xj))
-            d = tf.cond(tf.shape(t)[0] > 0, lambda: m[t[0][0]], lambda: tf.zeros([attn_len]))
+            d = tf.cond(tf.shape(t)[0] > 0, lambda: m[tf.to_int32(t[0][0])], lambda: tf.zeros([attn_len]))
             p_dist.append(d)
           context_vector = math_ops.reduce_sum(array_ops.reshape((p_oc *  p_dist + (1 - p_oc) * attn_dist), [batch_size, -1, 1, 1]) * encoder_states, [1, 2]) # shape (batch_size, attn_size).
         else:
