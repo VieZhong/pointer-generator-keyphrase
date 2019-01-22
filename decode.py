@@ -31,7 +31,7 @@ import hashlib
 FLAGS = tf.app.flags.FLAGS
 
 SECS_UNTIL_NEW_CKPT = 60  # max number of seconds before loading new checkpoint
-DECODE_MAX_NUM = 50
+DECODE_MAX_NUM = 120
 
 
 class BeamSearchDecoder(object):
