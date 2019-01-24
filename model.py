@@ -210,7 +210,8 @@ class SummarizationModel(object):
         co_matrix = tf.slice(self._cooccurrence_matrix, [0, 0, 0], [-1, attn_len, attn_len])
 
       # Multiply vocab dists by p_gen and attention dists by (1-p_gen)
-      vocab_dists = [p_gen * dist for (p_gen, dist) in zip(self.p_gens, vocab_dists)]
+      if not self._hps.generation_only:
+        vocab_dists = [p_gen * dist for (p_gen, dist) in zip(self.p_gens, vocab_dists)]
 
       if self._hps.markov_attention:
         mark_dists = []
