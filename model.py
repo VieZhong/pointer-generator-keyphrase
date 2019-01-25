@@ -226,7 +226,8 @@ class SummarizationModel(object):
         p_r = 0.2
         attn_dists = [(1 - p_gen) * (1 - p_r) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
       else:
-        attn_dists = [(1 - p_gen) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
+        if not self._hps.copy_only:
+          attn_dists = [(1 - p_gen) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
 
       # Concatenate some zeros to each vocabulary dist, to hold the probabilities for in-article OOV words
       extended_vsize = self._vocab.size() + self._max_art_oovs # the maximum (over the batch) size of the extended vocabulary
