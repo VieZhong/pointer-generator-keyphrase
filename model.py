@@ -212,12 +212,14 @@ class SummarizationModel(object):
         p_r = 0.2
         attn_dists = [(1 - p_gen) * (1 - p_r) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
       else:
-        attn_dists = [(1 - p_gen) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
+        if not self._hps.copy_only:
+          attn_dists = [(1 - p_gen) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
 
       # Concatenate some zeros to each vocabulary dist, to hold the probabilities for in-article OOV words
       extended_vsize = self._vocab.size() + self._max_art_oovs # the maximum (over the batch) size of the extended vocabulary
-      extra_zeros = tf.zeros((self._hps.batch_size, self._max_art_oovs))
-      vocab_dists_extended = [tf.concat(axis=1, values=[dist, extra_zeros]) for dist in vocab_dists] # list length max_dec_steps of shape (batch_size, extended_vsize)
+      if not self._hps.copy_only:
+        extra_zeros = tf.zeros((self._hps.batch_size, self._max_art_oovs))
+        vocab_dists_extended = [tf.concat(axis=1, values=[dist, extra_zeros]) for dist in vocab_dists] # list length max_dec_steps of shape (batch_size, extended_vsize)
 
       if not self._hps.generation_only:
         # Project the values in the attention distributions onto the appropriate entries in the final distributions
@@ -254,6 +256,8 @@ class SummarizationModel(object):
         # Note that for decoder timesteps and examples corresponding to a [PAD] token, this is junk - ignore.
         if self._hps.generation_only:
           final_dists = vocab_dists_extended
+        elif self._hps.copy_only:
+          final_dists = attn_dists_projected
         else:
           final_dists = [vocab_dist + copy_dist for (vocab_dist, copy_dist) in zip(vocab_dists_extended, attn_dists_projected)]
 
