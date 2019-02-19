@@ -173,12 +173,12 @@ def example_generator(data_path, single_pass, decode_only):
     Deserialized tf.Example.
   """
   if decode_only:
-  """every line in the file should like:
-  {"title": "__title__", text: "__article__"}
+    """every line in the file should like:
+    {"title": "__title__", text: "__article__"}
 
-  Yields:
-    Deserialized tf.Example.
-  """
+    Yields:
+      Deserialized tf.Example.
+    """
     with open(data_path, "r", encoding='utf-8') as f:
       for line in f:
         line = line.strip()
