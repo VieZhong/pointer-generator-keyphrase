@@ -59,7 +59,7 @@ class BeamSearchDecoder(object):
       # Make a descriptive decode directory name
       ckpt_name = "ckpt-" + ckpt_path.split('-')[-1] # this is something of the form "ckpt-123456"
       self._decode_dir = os.path.join(FLAGS.log_root, get_decode_dir_name(ckpt_name))
-      if os.path.exists(self._decode_dir):
+      if os.path.exists(self._decode_dir) and not FLAGS.decode_only:
         raise Exception("single_pass decode directory %s should not already exist" % self._decode_dir)
 
     else: # Generic decode dir name
@@ -68,7 +68,7 @@ class BeamSearchDecoder(object):
     # Make the decode dir if necessary
     if not os.path.exists(self._decode_dir): os.mkdir(self._decode_dir)
 
-    if FLAGS.single_pass:
+    if FLAGS.single_pass and not FLAGS.decode_only:
       # Make the dirs to contain output written in the correct format for pyrouge
       self._rouge_ref_dir = FLAGS.ref_dir.replace('__DATASET__', 'kp20k' if FLAGS.language == 'english' else 'nssd_data')
       if not os.path.exists(self._rouge_ref_dir): os.mkdir(self._rouge_ref_dir)
@@ -81,14 +81,18 @@ class BeamSearchDecoder(object):
     t0 = time.time()
     counter = 0
     hashList = []
+    decode_result = []
     while True:
       batch = self._batcher.next_batch()  # 1 example repeated across batch
       if batch is None: # finished decoding dataset in single_pass mode
         assert FLAGS.single_pass, "Dataset exhausted, but we are not in single_pass mode"
         tf.logging.info("Decoder has finished reading dataset for single_pass.")
-        tf.logging.info("Output has been saved in %s and %s. Now starting F1_SCORE eval...", self._rouge_ref_dir, self._rouge_dec_dir)
-        f1_score = f1_score_eval(self._rouge_ref_dir, self._rouge_dec_dir)
-        f1_score_log(f1_score, self._decode_dir)
+        if not FLAGS.decode_only:
+          tf.logging.info("Output has been saved in %s and %s. Now starting F1_SCORE eval...", self._rouge_ref_dir, self._rouge_dec_dir)
+          f1_score = f1_score_eval(self._rouge_ref_dir, self._rouge_dec_dir)
+          f1_score_log(f1_score, self._decode_dir)
+        else:
+          write_decode_result_in_file(decode_result, self._decode_dir)
         return
 
       original_article = batch.original_articles[0]  # string
@@ -139,8 +143,12 @@ class BeamSearchDecoder(object):
       # except ValueError:
       #   decoded_words = decoded_words
       # decoded_output = ' '.join(decoded_words) # single string
-
-      if FLAGS.single_pass:
+      if FLAGS.decode_only:
+        result = []
+        for words in decoded_words[:8]:
+          result.append(''.join(words))
+        decode_result.append(';'.join(result))
+      elif FLAGS.single_pass:
         self.write_for_f1_eval(original_abstract_sents, decoded_words, counter) # write ref summary and decoded summary to file, to eval with pyrouge later
         counter += 1 # this is how many examples we've decoded
       else:
@@ -361,3 +369,10 @@ def hashhex(s):
   h = hashlib.sha1()
   h.update(s.encode('utf-8'))
   return h.hexdigest()
+
+
+def write_decode_result_in_file(result, dir_to_write):
+  with open(os.path.join(dir_to_write, "decode.txt"), "w", encoding="utf-8") as f:
+    for r in result:
+      f.write("%s\n" % r)
+    

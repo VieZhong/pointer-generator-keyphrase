@@ -336,7 +336,7 @@ class Batcher(object):
   def fill_example_queue(self):
     """Reads data from file and processes into Examples which are then placed into the example queue."""
 
-    input_gen = self.text_generator(data.example_generator(self._data_path, self._single_pass))
+    input_gen = self.text_generator(data.example_generator(self._data_path, self._single_pass, self._hps.decode_only))
 
     while True:
       try:
@@ -421,26 +421,28 @@ class Batcher(object):
     Args:
       example_generator: a generator of tf.Examples from file. See data.example_generator"""
     while True:
-      e = next(example_generator) # e is a tf.Example
-      try:
-        article_text = e.features.feature['article'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
-        if self._hps.title_engaged or self._hps.title_guided:
-          title_text = e.features.feature['title'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
-          article_text = title_text + ' ' + article_text
-          title_text = data.replace_number_to_string(title_text)
-        else:
-          title_text = None
-        abstract_text = e.features.feature['keyword'].bytes_list.value[0].decode() # the abstract text was saved under the key 'abstract' in the data files
-        if self._hps.tagger_attention or self._hps.tagger_encoding:
-          article_tags = e.features.feature['tags'].bytes_list.value[0].decode()
-          article_tags = data.get_tagger_index(article_text, article_tags)
-        else:
-          article_tags = None
-      except ValueError:
-        tf.logging.error('Failed to get article or abstract from example')
-        continue
-      if len(article_text)==0: # See https://github.com/abisee/pointer-generator/issues/1
-        tf.logging.warning('Found an example with empty article text. Skipping it.')
+      text = next(example_generator) # e is a tf.Example
+      if self._hps.mode == 'decode' and self._hps.decode_only:
+        yield (text, "<s>xxx</s>", None, None)
       else:
-
-        yield (data.replace_number_to_string(article_text), data.replace_number_to_string(abstract_text), article_tags, title_text)
+        try:
+          article_text = e.features.feature['article'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
+          if self._hps.title_engaged or self._hps.title_guided:
+            title_text = e.features.feature['title'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
+            article_text = title_text + ' ' + article_text
+            title_text = data.replace_number_to_string(title_text)
+          else:
+            title_text = None
+          abstract_text = e.features.feature['keyword'].bytes_list.value[0].decode() # the abstract text was saved under the key 'abstract' in the data files
+          if self._hps.tagger_attention or self._hps.tagger_encoding:
+            article_tags = e.features.feature['tags'].bytes_list.value[0].decode()
+            article_tags = data.get_tagger_index(article_text, article_tags)
+          else:
+            article_tags = None
+        except ValueError:
+          tf.logging.error('Failed to get article or abstract from example')
+          continue
+        if len(article_text)==0: # See https://github.com/abisee/pointer-generator/issues/1
+          tf.logging.warning('Found an example with empty article text. Skipping it.')
+        else:
+          yield (data.replace_number_to_string(article_text), data.replace_number_to_string(abstract_text), article_tags, title_text)

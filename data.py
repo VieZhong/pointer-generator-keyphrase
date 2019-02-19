@@ -17,11 +17,13 @@
 """This file contains code to read the train/eval/test data from file and process it, and read the vocab data from file and process it"""
 
 import glob
+import json
 import random
 import struct
 import csv
 import hashlib
 import util
+import jieba
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.example import example_pb2
@@ -154,7 +156,7 @@ class Vocab(object):
         writer.writerow({"word": self._id_to_word[i]})
 
 
-def example_generator(data_path, single_pass):
+def example_generator(data_path, single_pass, decode_only):
   """Generates tf.Examples from data files.
 
     Binary data format: <length><blob>. <length> represents the byte size
@@ -170,24 +172,40 @@ def example_generator(data_path, single_pass):
   Yields:
     Deserialized tf.Example.
   """
-  while True:
-    filelist = glob.glob(data_path) # get the list of datafiles
-    assert filelist, ('Error: Empty filelist at %s' % data_path) # check filelist isn't empty
-    if single_pass:
-      filelist = sorted(filelist)
-    else:
-      random.shuffle(filelist)
-    for f in filelist:
-      reader = open(f, 'rb')
-      while True:
-        len_bytes = reader.read(8)
-        if not len_bytes: break # finished reading this file
-        str_len = struct.unpack('q', len_bytes)[0]
-        example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
-        yield example_pb2.Example.FromString(example_str)
-    if single_pass:
-      print("example_generator completed reading all datafiles. No more data.")
-      break
+  if decode_only:
+  """every line in the file should like:
+  {"title": "__title__", text: "__article__"}
+
+  Yields:
+    Deserialized tf.Example.
+  """
+    with open(data_path, "r", encoding='utf-8') as f:
+      for line in f:
+        line = line.strip()
+        if line:
+          result = json.loads(line)
+          if "title" in result and "text" in result:
+            text = result["title"] + " " + result["text"]
+            yield ' '.join(jieba.cut(text))
+  else:
+    while True:
+      filelist = glob.glob(data_path) # get the list of datafiles
+      assert filelist, ('Error: Empty filelist at %s' % data_path) # check filelist isn't empty
+      if single_pass:
+        filelist = sorted(filelist)
+      else:
+        random.shuffle(filelist)
+      for f in filelist:
+        reader = open(f, 'rb')
+        while True:
+          len_bytes = reader.read(8)
+          if not len_bytes: break # finished reading this file
+          str_len = struct.unpack('q', len_bytes)[0]
+          example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
+          yield example_pb2.Example.FromString(example_str)
+      if single_pass:
+        print("example_generator completed reading all datafiles. No more data.")
+        break
 
 
 def article2ids(article_words, vocab):

@@ -33,23 +33,24 @@ from tensorflow.python import debug as tf_debug
 FLAGS = tf.app.flags.FLAGS
 
 # Where to find data
-tf.app.flags.DEFINE_string('data_path', '', 'Path expression to tf.Example datafiles. Can include wildcards to access multiple datafiles.')
-tf.app.flags.DEFINE_string('vocab_path', '', 'Path expression to text vocabulary file.')
-tf.app.flags.DEFINE_string('stop_words_path', '', 'Path expression to stop words file')
+tf.app.flags.DEFINE_string('data_path', '/tmp/test/example.txt', 'Path expression to tf.Example datafiles. Can include wildcards to access multiple datafiles.')
+tf.app.flags.DEFINE_string('vocab_path', '/data/nssd_data/with_title/finished_files/vocab', 'Path expression to text vocabulary file.')
+tf.app.flags.DEFINE_string('stop_words_path', '/data/nssd_data/stopword/stopword_cn.txt', 'Path expression to stop words file')
 tf.app.flags.DEFINE_string('ref_dir', '/data/__DATASET__/val_reference/', 'Path to reference words')
 
 # Important settings
-tf.app.flags.DEFINE_string('mode', 'train', 'must be one of train/eval/decode')
-tf.app.flags.DEFINE_boolean('single_pass', False, 'For decode mode only. If True, run eval on the full dataset using a fixed checkpoint, i.e. take the current checkpoint, and use it to produce one summary for each example in the dataset, write the summaries to file and then get ROUGE scores for the whole dataset. If False (default), run concurrent decoding, i.e. repeatedly load latest checkpoint, use it to produce summaries for randomly-chosen examples and log the results to screen, indefinitely.')
+tf.app.flags.DEFINE_string('mode', 'decode', 'must be one of train/eval/decode')
+tf.app.flags.DEFINE_boolean('single_pass', True, 'For decode mode only. If True, run eval on the full dataset using a fixed checkpoint, i.e. take the current checkpoint, and use it to produce one summary for each example in the dataset, write the summaries to file and then get ROUGE scores for the whole dataset. If False (default), run concurrent decoding, i.e. repeatedly load latest checkpoint, use it to produce summaries for randomly-chosen examples and log the results to screen, indefinitely.')
+tf.app.flags.DEFINE_boolean('decode_only', True, 'If True, only decode, do not calculate f1 score. only for chinese, only for special format data_path')
 
 # Where to save output
-tf.app.flags.DEFINE_string('log_root', '', 'Root directory for all logging.')
-tf.app.flags.DEFINE_string('exp_name', '', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
-tf.app.flags.DEFINE_string('language', 'english', 'language')
+tf.app.flags.DEFINE_string('log_root', '/tmp/test-pointer-generater/log/', 'Root directory for all logging.')
+tf.app.flags.DEFINE_string('exp_name', 'nssd_co_occurrence_h_experiment', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
+tf.app.flags.DEFINE_string('language', 'chinese', 'language')
 
 # Encoder and decoder settings
 tf.app.flags.DEFINE_string('cell_type', 'LSTM', 'LSTM or GRU')
-tf.app.flags.DEFINE_float('dropout', 0.5, 'for dropout')
+tf.app.flags.DEFINE_float('dropout', 0.0, 'for dropout')
 
 # Hyperparameters
 tf.app.flags.DEFINE_integer('hidden_dim', 256, 'dimension of RNN hidden states')
@@ -57,7 +58,7 @@ tf.app.flags.DEFINE_integer('emb_dim', 128, 'dimension of word embeddings')
 tf.app.flags.DEFINE_integer('batch_size', 16, 'minibatch size')
 tf.app.flags.DEFINE_integer('max_enc_steps', 400, 'max timesteps of encoder (max source text tokens)')
 tf.app.flags.DEFINE_integer('max_dec_steps', 10, 'max timesteps of decoder (max summary tokens)')
-tf.app.flags.DEFINE_integer('beam_size', 5, 'beam size for beam search decoding.')
+tf.app.flags.DEFINE_integer('beam_size', 200, 'beam size for beam search decoding.')
 tf.app.flags.DEFINE_integer('beam_depth', 6, 'beam depth for beam search decoding')
 tf.app.flags.DEFINE_integer('min_dec_steps', 1, 'Minimum sequence length of generated summary. Applies only for beam search decoding mode')
 tf.app.flags.DEFINE_integer('vocab_size', 50000, 'Size of vocabulary. These will be read from the vocabulary file in order. If the vocabulary file contains fewer words than this number, or if this number is set to 0, will take all words in the vocabulary file.')
@@ -75,7 +76,7 @@ tf.app.flags.DEFINE_string('optimizer', 'Adagrad', 'Adagrad or Adam')
 tf.app.flags.DEFINE_boolean('pointer_gen', True, 'If True, use pointer-generator model. If False, use baseline model.')
 
 # Coverage hyperparameters
-tf.app.flags.DEFINE_boolean('coverage', False, 'Use coverage mechanism. Note, the experiments reported in the ACL paper train WITHOUT coverage until converged, and then train for a short phase WITH coverage afterwards. i.e. to reproduce the results in the ACL paper, turn this off for most of training then turn on for a short phase at the end.')
+tf.app.flags.DEFINE_boolean('coverage', True, 'Use coverage mechanism. Note, the experiments reported in the ACL paper train WITHOUT coverage until converged, and then train for a short phase WITH coverage afterwards. i.e. to reproduce the results in the ACL paper, turn this off for most of training then turn on for a short phase at the end.')
 tf.app.flags.DEFINE_float('cov_loss_wt', 1.0, 'Weight of coverage loss (lambda in the paper). If zero, then no incentive to minimize coverage loss.')
 
 # VieZhong Improvement Hyperparameters
@@ -83,7 +84,7 @@ tf.app.flags.DEFINE_boolean('attention_weighted', False, 'Whether attention mech
 tf.app.flags.DEFINE_boolean('coverage_weighted', False, 'Whether coverage mechanism is weighted.')
 tf.app.flags.DEFINE_boolean('coverage_weighted_expansion', False, 'Whether coverage mechanism is weighted.')
 tf.app.flags.DEFINE_boolean('co_occurrence', False, 'Whether to use co_occurrence factor.')
-tf.app.flags.DEFINE_boolean('co_occurrence_h', False, 'Whether to use co_occurrence_h factor.')
+tf.app.flags.DEFINE_boolean('co_occurrence_h', True, 'Whether to use co_occurrence_h factor.')
 tf.app.flags.DEFINE_boolean('co_occurrence_i', False, 'Whether to concat co_occurrence matrix to encoder embeddings.')
 tf.app.flags.DEFINE_boolean('prev_relation', False, 'Whether to use the previous output word to predict the next output word.')
 tf.app.flags.DEFINE_boolean('source_siding_bridge', False, 'Whether to use source siding bridging model.')
@@ -332,7 +333,7 @@ def main(unused_argv):
   #   raise Exception("The co_occurrence flag should be True when the prev_relation flag is True")
 
   # Make a namedtuple hps, containing the values of the hyperparameters that the model needs
-  hparam_list = ['generation_only', 'copy_only', 'occurrence_window_size', 'max_title_len', 'title_engaged', 'title_guided', 'ref_dir', 'tagger_encoding', 'tagger_attention', 'source_siding_bridge', 'target_siding_bridge', 'language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'beam_depth', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'attention_weighted', 'coverage', 'coverage_weighted', 'coverage_weighted_expansion', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'co_occurrence_i', 'cov_loss_wt', 'pointer_gen', 'cell_type', 'markov_attention', 'markov_attention_contribution', 'markov_attention_contribution_used_x']
+  hparam_list = ['decode_only', 'generation_only', 'copy_only', 'occurrence_window_size', 'max_title_len', 'title_engaged', 'title_guided', 'ref_dir', 'tagger_encoding', 'tagger_attention', 'source_siding_bridge', 'target_siding_bridge', 'language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'beam_depth', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'attention_weighted', 'coverage', 'coverage_weighted', 'coverage_weighted_expansion', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'co_occurrence_i', 'cov_loss_wt', 'pointer_gen', 'cell_type', 'markov_attention', 'markov_attention_contribution', 'markov_attention_contribution_used_x']
   hps_dict = {}
   for key,val in FLAGS.__flags.items(): # for each flag
     if key in hparam_list: # if it's in the list
