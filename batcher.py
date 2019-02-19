@@ -421,10 +421,11 @@ class Batcher(object):
     Args:
       example_generator: a generator of tf.Examples from file. See data.example_generator"""
     while True:
-      e = next(example_generator) # e is a tf.Example
       if self._hps.mode == 'decode' and self._hps.decode_only:
-        yield (e, "<s>xxx</s>", None, None)
+        text, text_id = next(example_generator)
+        yield (text, "<s>%s</s>" % text_id, None, None)
       else:
+        e = next(example_generator) # e is a tf.Example
         try:
           article_text = e.features.feature['article'].bytes_list.value[0].decode() # the article text was saved under the key 'article' in the data files
           if self._hps.title_engaged or self._hps.title_guided:

@@ -184,9 +184,9 @@ def example_generator(data_path, single_pass, decode_only):
         line = line.strip()
         if line:
           result = json.loads(line)
-          if "title" in result and "text" in result:
+          if "title" in result and "text" in result and "id" in result:
             text = result["title"] + " " + result["text"]
-            yield ' '.join(jieba.cut(text))
+            yield (' '.join(jieba.cut(text)), result["id"])
   else:
     while True:
       filelist = glob.glob(data_path) # get the list of datafiles

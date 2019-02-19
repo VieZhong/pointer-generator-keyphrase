@@ -147,7 +147,7 @@ class BeamSearchDecoder(object):
         result = []
         for words in decoded_words[:8]:
           result.append(''.join(words))
-        decode_result.append(';'.join(result))
+        decode_result.append(original_abstract_sents[0] + ':' + ';'.join(result))
       elif FLAGS.single_pass:
         self.write_for_f1_eval(original_abstract_sents, decoded_words, counter) # write ref summary and decoded summary to file, to eval with pyrouge later
         counter += 1 # this is how many examples we've decoded
