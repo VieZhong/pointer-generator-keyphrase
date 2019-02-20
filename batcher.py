@@ -423,7 +423,7 @@ class Batcher(object):
     while True:
       if self._hps.mode == 'decode' and self._hps.decode_only:
         text, text_id = next(example_generator)
-        yield (text, "<s>%s</s>" % text_id, None, None)
+        yield (data.replace_number_to_string(text), "<s>%s</s>" % text_id, None, None)
       else:
         e = next(example_generator) # e is a tf.Example
         try:
