@@ -34,8 +34,8 @@ FLAGS = tf.app.flags.FLAGS
 
 # Where to find data
 tf.app.flags.DEFINE_string('data_path', '/tmp/test/example.txt', 'Path expression to tf.Example datafiles. Can include wildcards to access multiple datafiles.')
-tf.app.flags.DEFINE_string('vocab_path', '/data/nssd_data/finished_files/vocab', 'Path expression to text vocabulary file.')
-tf.app.flags.DEFINE_string('stop_words_path', '/data/nssd_data/stopword/stopword_cn.txt', 'Path expression to stop words file')
+tf.app.flags.DEFINE_string('vocab_path', '/project/data/test_for_generator_keyphrase/finished_files/vocab', 'Path expression to text vocabulary file.')
+tf.app.flags.DEFINE_string('stop_words_path', '/project/data/stopword/stopword_en.txt', 'Path expression to stop words file')
 tf.app.flags.DEFINE_string('ref_dir', '/data/__DATASET__/val_reference/', 'Path to reference words')
 
 # Important settings
@@ -45,8 +45,8 @@ tf.app.flags.DEFINE_boolean('decode_only', True, 'If True, only decode, do not c
 
 # Where to save output
 tf.app.flags.DEFINE_string('log_root', '/tmp/test-pointer-generater/log/', 'Root directory for all logging.')
-tf.app.flags.DEFINE_string('exp_name', 'nssd_co_occurrence_h_experiment', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
-tf.app.flags.DEFINE_string('language', 'chinese', 'language')
+tf.app.flags.DEFINE_string('exp_name', 'co_occurrence_h_experiment', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
+tf.app.flags.DEFINE_string('language', 'english', 'language')
 
 # Encoder and decoder settings
 tf.app.flags.DEFINE_string('cell_type', 'LSTM', 'LSTM or GRU')
@@ -57,12 +57,12 @@ tf.app.flags.DEFINE_integer('hidden_dim', 256, 'dimension of RNN hidden states')
 tf.app.flags.DEFINE_integer('emb_dim', 128, 'dimension of word embeddings')
 tf.app.flags.DEFINE_integer('batch_size', 16, 'minibatch size')
 tf.app.flags.DEFINE_integer('max_enc_steps', 400, 'max timesteps of encoder (max source text tokens)')
-tf.app.flags.DEFINE_integer('max_dec_steps', 10, 'max timesteps of decoder (max summary tokens)')
+tf.app.flags.DEFINE_integer('max_dec_steps', 8, 'max timesteps of decoder (max summary tokens)')
 tf.app.flags.DEFINE_integer('beam_size', 200, 'beam size for beam search decoding.')
 tf.app.flags.DEFINE_integer('beam_depth', 6, 'beam depth for beam search decoding')
 tf.app.flags.DEFINE_integer('min_dec_steps', 1, 'Minimum sequence length of generated summary. Applies only for beam search decoding mode')
 tf.app.flags.DEFINE_integer('vocab_size', 50000, 'Size of vocabulary. These will be read from the vocabulary file in order. If the vocabulary file contains fewer words than this number, or if this number is set to 0, will take all words in the vocabulary file.')
-tf.app.flags.DEFINE_integer('max_keyphrase_num', 5, 'max keyphrase number')
+tf.app.flags.DEFINE_integer('max_keyphrase_num', 10, 'max keyphrase number')
 tf.app.flags.DEFINE_integer('max_title_len', 20, 'max title length')
 tf.app.flags.DEFINE_integer('occurrence_window_size', 3, 'window size while calculating occurrence matrix')
 tf.app.flags.DEFINE_float('lr', 0.15, 'learning rate')
