@@ -336,7 +336,7 @@ class Batcher(object):
   def fill_example_queue(self):
     """Reads data from file and processes into Examples which are then placed into the example queue."""
 
-    input_gen = self.text_generator(data.example_generator(self._data_path, self._single_pass, self._hps.decode_only))
+    input_gen = self.text_generator(data.example_generator(self._data_path, self._single_pass, self._hps.decode_only, self._hps.language))
 
     while True:
       try:

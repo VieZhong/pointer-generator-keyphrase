@@ -28,6 +28,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.core.example import example_pb2
 from collections import OrderedDict
+from nltk.tokenize import word_tokenize
 
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
 SENTENCE_START = '<s>'
@@ -156,7 +157,7 @@ class Vocab(object):
         writer.writerow({"word": self._id_to_word[i]})
 
 
-def example_generator(data_path, single_pass, decode_only):
+def example_generator(data_path, single_pass, decode_only, lang):
   """Generates tf.Examples from data files.
 
     Binary data format: <length><blob>. <length> represents the byte size
@@ -184,9 +185,16 @@ def example_generator(data_path, single_pass, decode_only):
         line = line.strip()
         if line:
           result = json.loads(line)
-          if "title" in result and "text" in result and "id" in result:
+          if "title" in result and "text" in result:
             text = result["title"] + " " + result["text"]
-            yield (' '.join(jieba.cut(text)), result["id"])
+            text_id = "xxx"
+            if "id" in result:
+              text_id = result["id"]
+              if lang == 'english':
+                text = ' '.join(word_tokenize(text.lower()))
+              elif lang == 'chinese':
+                text = ' '.join(jieba.cut(text))
+            yield (text, text_id)
   else:
     while True:
       filelist = glob.glob(data_path) # get the list of datafiles

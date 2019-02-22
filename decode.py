@@ -146,7 +146,7 @@ class BeamSearchDecoder(object):
       if FLAGS.decode_only:
         result = []
         for words in decoded_words[:8]:
-          result.append(''.join(words))
+          result.append(''.join(words) if FLAGS.language == 'chinese' else ' '.join(words))
         decode_result.append(original_abstract_sents[0] + ':' + ';'.join(result))
       elif FLAGS.single_pass:
         self.write_for_f1_eval(original_abstract_sents, decoded_words, counter) # write ref summary and decoded summary to file, to eval with pyrouge later
