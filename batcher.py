@@ -262,7 +262,7 @@ class Batcher(object):
 
   BATCH_QUEUE_MAX = 100 # max number of batches the batch_queue can hold
 
-  def __init__(self, data_path, vocab, hps, single_pass, stop_words):
+  def __init__(self, data_path_or_data, vocab, hps, single_pass, stop_words):
     """Initialize the batcher. Start threads that process the data into batches.
 
     Args:
@@ -271,7 +271,7 @@ class Batcher(object):
       hps: hyperparameters
       single_pass: If True, run through the dataset exactly once (useful for when you want to run evaluation on the dev or test set). Otherwise generate random batches indefinitely (useful for training).
     """
-    self._data_path = data_path
+    self._data_path_or_data = data_path_or_data
     self._vocab = vocab
     self._hps = hps
     self._single_pass = single_pass
@@ -336,7 +336,7 @@ class Batcher(object):
   def fill_example_queue(self):
     """Reads data from file and processes into Examples which are then placed into the example queue."""
 
-    input_gen = self.text_generator(data.example_generator(self._data_path, self._single_pass, self._hps.decode_only, self._hps.language))
+    input_gen = self.text_generator(data.example_generator(self._data_path_or_data, self._single_pass, self._hps.decode_only, self._hps.language))
 
     while True:
       try:

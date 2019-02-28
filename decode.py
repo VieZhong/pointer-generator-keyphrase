@@ -92,7 +92,8 @@ class BeamSearchDecoder(object):
           f1_score = f1_score_eval(self._rouge_ref_dir, self._rouge_dec_dir)
           f1_score_log(f1_score, self._decode_dir)
         else:
-          write_decode_result_in_file(decode_result, self._decode_dir)
+          # write_decode_result_in_file(decode_result, self._decode_dir)
+          return decode_result
         return
 
       original_article = batch.original_articles[0]  # string
@@ -147,7 +148,7 @@ class BeamSearchDecoder(object):
         result = []
         for words in decoded_words[:8]:
           result.append(''.join(words) if FLAGS.language == 'chinese' else ' '.join(words))
-        decode_result.append(original_abstract_sents[0] + ':' + ';'.join(result))
+        decode_result.append({"id": original_abstract_sents[0], "keyphrases": ';'.join(result)})
       elif FLAGS.single_pass:
         self.write_for_f1_eval(original_abstract_sents, decoded_words, counter) # write ref summary and decoded summary to file, to eval with pyrouge later
         counter += 1 # this is how many examples we've decoded
@@ -371,8 +372,8 @@ def hashhex(s):
   return h.hexdigest()
 
 
-def write_decode_result_in_file(result, dir_to_write):
-  with open(os.path.join(dir_to_write, "decode.txt"), "w", encoding="utf-8") as f:
-    for r in result:
-      f.write("%s\n" % r)
+# def write_decode_result_in_file(result, dir_to_write):
+#   with open(os.path.join(dir_to_write, "decode.txt"), "w", encoding="utf-8") as f:
+#     for r in result:
+#       f.write("%s\n" % r)
     
