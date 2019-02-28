@@ -16,6 +16,11 @@
 
 """This is the top-level file to train, evaluate or test your summarization model"""
 # coding=utf-8
+"""Generic entry point script."""
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import sys
 import time
 import os
@@ -166,10 +171,7 @@ def main(articles):
     raise ValueError("The 'mode' flag must be one of train/eval/decode")
 
 
-"""Generic entry point script."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 import sys as _sys
 
