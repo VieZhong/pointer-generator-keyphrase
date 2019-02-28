@@ -196,7 +196,7 @@ def run(article_list):
 
   # Call the main function, passing through any arguments
   # to the final program.
-  return main(article_list)
+  return _sys.modules['__main__'].main(article_list)
 
 
 _allowed_symbols = [
