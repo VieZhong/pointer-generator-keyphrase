@@ -178,21 +178,21 @@ __HOST = 'localhost'
 __PORT = 8080
 
 class KeyphrasesHandler(object):
-    def predict(self, articles):
-        article_list = [{"id": a.id, "title": a.title, "text": a.text} for a in articles]
-        decode_results = main(article_list)
-        return [ttypes.Keyphrase(r["id"], r["keyphrases"]) for r in decode_results]
+  def predict(self, articles):
+    article_list = [{"id": a.id, "title": a.title, "text": a.text} for a in articles]
+    decode_results = main(article_list)
+    return [ttypes.Keyphrase(r["id"], r["keyphrases"]) for r in decode_results]
 
 
 if __name__ == '__main__':
-    handler = KeyphrasesHandler()
+  handler = KeyphrasesHandler()
 
-    processor = KeyphraseModel.Processor(handler)
-    transport = TSocket.TServerSocket(__HOST, __PORT)
-    tfactory = TTransport.TBufferedTransportFactory()
-    pfactory = TBinaryProtocol.TBinaryProtocolFactory()
+  processor = KeyphraseModel.Processor(handler)
+  transport = TSocket.TServerSocket(__HOST, __PORT)
+  tfactory = TTransport.TBufferedTransportFactory()
+  pfactory = TBinaryProtocol.TBinaryProtocolFactory()
 
-    rpcServer = TServer.TSimpleServer(processor,transport, tfactory, pfactory)
+  rpcServer = TServer.TSimpleServer(processor,transport, tfactory, pfactory)
 
-    print('Starting the rpc server at', __HOST,':', __PORT)
-    rpcServer.serve()
+  print('Starting the rpc server at', __HOST,':', __PORT)
+  rpcServer.serve()
