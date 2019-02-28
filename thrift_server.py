@@ -16,10 +16,6 @@
 
 """This is the top-level file to train, evaluate or test your summarization model"""
 # coding=utf-8
-"""Generic entry point script."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import sys
 import time
@@ -34,6 +30,12 @@ from model import SummarizationModel
 from decode import BeamSearchDecoder
 import util
 from tensorflow.python import debug as tf_debug
+
+import sys as _sys
+
+from tensorflow.python.platform import flags
+from tensorflow.python.util.all_util import remove_undocumented
+
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -173,10 +175,6 @@ def main(articles):
 
 
 
-import sys as _sys
-
-from tensorflow.python.platform import flags
-from tensorflow.python.util.all_util import remove_undocumented
 
 
 def _benchmark_tests_can_log_memory():
