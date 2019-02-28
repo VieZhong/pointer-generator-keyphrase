@@ -109,13 +109,7 @@ tf.app.flags.DEFINE_boolean('debug', False, "Run in tensorflow's debug mode (wat
 
 
 
-
-
-
-def main(argv):
-  articles = argv[0]
-  print("\n \n main_argv:")
-  print(articles[0])
+def main(articles):
   tf.logging.set_verbosity(tf.logging.INFO) # choose what level of logging you want
   tf.logging.info('Starting seq2seq_attention in %s mode...', (FLAGS.mode))
 

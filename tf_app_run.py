@@ -30,8 +30,7 @@ def _benchmark_tests_can_log_memory():
 
 def run(main=None, argv=None):
   """Runs the program with an optional 'main' function and 'argv' list."""
-  print("\n \n argv:")
-  print(argv[0])
+  articles = argv[0]
   f = flags.FLAGS
 
   # Extract the args from the optional `argv` list.
@@ -47,7 +46,7 @@ def run(main=None, argv=None):
 
   # Call the main function, passing through any arguments
   # to the final program.
-  return main(_sys.argv[:1] + flags_passthrough)
+  return main(articles)
 
 
 _allowed_symbols = [
