@@ -16,7 +16,6 @@
 
 """This is the top-level file to train, evaluate or test your summarization model"""
 # coding=utf-8
-
 import sys
 import time
 import os
@@ -30,12 +29,6 @@ from model import SummarizationModel
 from decode import BeamSearchDecoder
 import util
 from tensorflow.python import debug as tf_debug
-
-import sys as _sys
-
-from tensorflow.python.platform import flags
-from tensorflow.python.util.all_util import remove_undocumented
-
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -52,7 +45,7 @@ tf.app.flags.DEFINE_boolean('decode_only', True, 'If True, only decode, do not c
 
 # Where to save output
 tf.app.flags.DEFINE_string('log_root', '/tmp/test-pointer-generater/log/', 'Root directory for all logging.')
-tf.app.flags.DEFINE_string('exp_name', 'co_occurrence_h_new_experiment', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
+tf.app.flags.DEFINE_string('exp_name', 'co_occurrence_h_experiment', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
 tf.app.flags.DEFINE_string('language', 'english', 'language')
 
 # Encoder and decoder settings
@@ -119,8 +112,9 @@ tf.app.flags.DEFINE_boolean('debug', False, "Run in tensorflow's debug mode (wat
 
 
 
-def main(articles):
-
+def main(argv):
+  articles = argv[0]
+  
   tf.logging.set_verbosity(tf.logging.INFO) # choose what level of logging you want
   tf.logging.info('Starting seq2seq_attention in %s mode...', (FLAGS.mode))
 
@@ -174,41 +168,6 @@ def main(articles):
 
 
 
-
-
-
-def _benchmark_tests_can_log_memory():
-  return True
-
-
-def run(article_list):
-  """Runs the program with an optional 'main' function and 'argv' list."""
-  f = flags.FLAGS
-
-  # Extract the args from the optional `argv` list.
-  # args = argv[1:] if argv else None
-
-  # Parse the known flags from that list, or from the command
-  # line otherwise.
-  # pylint: disable=protected-access
-  f._parse_flags()
-  # pylint: enable=protected-access
-
-  # Call the main function, passing through any arguments
-  # to the final program.
-  return _sys.modules['__main__'].main(article_list)
-
-
-_allowed_symbols = [
-    'run',
-    # Allowed submodule.
-    'flags',
-]
-
-remove_undocumented(__name__, _allowed_symbols)
-
-
-
 from keyphrase import KeyphraseModel
 from keyphrase import ttypes
 from thrift.transport import TSocket
@@ -222,7 +181,7 @@ __PORT = 8080
 class KeyphrasesHandler(object):
   def predict(self, articles):
     article_list = [{"id": a.id, "title": a.title, "text": a.text} for a in articles]
-    decode_results = run(article_list)
+    decode_results = tf.app.run(argv=[article_list])
     return [ttypes.Keyphrase(r["id"], r["keyphrases"]) for r in decode_results]
 
 
