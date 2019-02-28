@@ -28,7 +28,7 @@ def _benchmark_tests_can_log_memory():
   return True
 
 
-def run(main=None, argv=None):
+def tf_app_run(main=None, argv=None):
   """Runs the program with an optional 'main' function and 'argv' list."""
   print("\n \n argv:")
   print(argv[0])
