@@ -114,7 +114,8 @@ tf.app.flags.DEFINE_boolean('debug', False, "Run in tensorflow's debug mode (wat
 
 def main(argv):
   articles = argv[0]
-  
+  print("\n \n main_argv:")
+  print(articles[0])
   tf.logging.set_verbosity(tf.logging.INFO) # choose what level of logging you want
   tf.logging.info('Starting seq2seq_attention in %s mode...', (FLAGS.mode))
 
@@ -175,13 +176,18 @@ from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
 from thrift.server import TServer
 
+from tf_app_run import tf_app_run
+
+
 __HOST = 'localhost'
 __PORT = 8080
 
 class KeyphrasesHandler(object):
   def predict(self, articles):
     article_list = [{"id": a.id, "title": a.title, "text": a.text} for a in articles]
-    decode_results = tf.app.run(argv=[article_list])
+    decode_results = tf_app_run(argv=[article_list])
+    print("\n \n decode_results:")
+    print(decode_results)
     return [ttypes.Keyphrase(r["id"], r["keyphrases"]) for r in decode_results]
 
 
