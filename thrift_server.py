@@ -176,7 +176,7 @@ from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
 from thrift.server import TServer
 
-from tf_app_run import tf_app_run
+from tf_app_run import run
 
 
 __HOST = 'localhost'
@@ -185,7 +185,7 @@ __PORT = 8080
 class KeyphrasesHandler(object):
   def predict(self, articles):
     article_list = [{"id": a.id, "title": a.title, "text": a.text} for a in articles]
-    decode_results = tf_app_run(argv=[article_list])
+    decode_results = run(argv=[article_list])
     print("\n \n decode_results:")
     print(decode_results)
     return [ttypes.Keyphrase(r["id"], r["keyphrases"]) for r in decode_results]
