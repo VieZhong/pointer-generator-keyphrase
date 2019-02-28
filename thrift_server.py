@@ -166,6 +166,48 @@ def main(articles):
     raise ValueError("The 'mode' flag must be one of train/eval/decode")
 
 
+"""Generic entry point script."""
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import sys as _sys
+
+from tensorflow.python.platform import flags
+from tensorflow.python.util.all_util import remove_undocumented
+
+
+def _benchmark_tests_can_log_memory():
+  return True
+
+
+def run(article_list):
+  """Runs the program with an optional 'main' function and 'argv' list."""
+  f = flags.FLAGS
+
+  # Extract the args from the optional `argv` list.
+  # args = argv[1:] if argv else None
+
+  # Parse the known flags from that list, or from the command
+  # line otherwise.
+  # pylint: disable=protected-access
+  f._parse_flags()
+  # pylint: enable=protected-access
+
+  # Call the main function, passing through any arguments
+  # to the final program.
+  return main(article_list)
+
+
+_allowed_symbols = [
+    'run',
+    # Allowed submodule.
+    'flags',
+]
+
+remove_undocumented(__name__, _allowed_symbols)
+
+
 
 from keyphrase import KeyphraseModel
 from keyphrase import ttypes
@@ -180,7 +222,7 @@ __PORT = 8080
 class KeyphrasesHandler(object):
   def predict(self, articles):
     article_list = [{"id": a.id, "title": a.title, "text": a.text} for a in articles]
-    decode_results = main(article_list)
+    decode_results = run(article_list)
     return [ttypes.Keyphrase(r["id"], r["keyphrases"]) for r in decode_results]
 
 
