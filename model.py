@@ -307,7 +307,6 @@ class SummarizationModel(object):
 
       # Add embedding matrix (shared by the encoder and decoder inputs)
       with tf.variable_scope('embedding') as embedding_scope:
-        embedding_scope.reuse_variables()
         embedding = tf.get_variable('embedding', [vsize, hps.emb_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
         if hps.mode=="train": self._add_emb_vis(embedding) # add to tensorboard
         emb_enc_inputs = tf.nn.embedding_lookup(embedding, self._enc_batch) # tensor with shape (batch_size, max_enc_steps, emb_size)
