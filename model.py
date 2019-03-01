@@ -484,9 +484,9 @@ class SummarizationModel(object):
     """
     feed_dict = self._make_feed_dict(batch, just_enc=True) # feed the batch into the placeholders
     if self._hps.title_engaged or self._hps.title_guided:
-      (enc_states, dec_in_state, global_step, title_states) = sess.run([self._enc_states, self._dec_in_state, self.global_step, self._title_states], feed_dict) # run the encoder
+      (enc_states, dec_in_state, title_states) = sess.run([self._enc_states, self._dec_in_state, self._title_states], feed_dict) # run the encoder
     else:
-      (enc_states, dec_in_state, global_step) = sess.run([self._enc_states, self._dec_in_state, self.global_step], feed_dict) # run the encoder
+      (enc_states, dec_in_state) = sess.run([self._enc_states, self._dec_in_state], feed_dict) # run the encoder
       title_states = None
     # dec_in_state is LSTMStateTuple shape ([batch_size,hidden_dim],[batch_size,hidden_dim])
     # Given that the batch is a single example repeated, dec_in_state is identical across the batch so we just take the top row.

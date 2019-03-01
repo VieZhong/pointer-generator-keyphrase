@@ -191,7 +191,6 @@ def example_generator(data_path_or_data, single_pass, decode_only, lang):
             text = ' '.join(word_tokenize(text.lower()))
           elif lang == 'chinese':
             text = ' '.join(jieba.cut(text))
-        console.log('\n\n\n\n' + text + '\n\n\n\n')
         yield (text, text_id)
   else:
     while True:
