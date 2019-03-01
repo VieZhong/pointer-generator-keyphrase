@@ -139,7 +139,7 @@ class SummarizationModel(object):
       state: LSTMStateTuple with hidden_dim units.
     """
     hidden_dim = self._hps.hidden_dim
-    with tf.variable_scope('reduce_final_st'):
+    with tf.variable_scope('reduce_final_st', reuse=tf.AUTO_REUSE):
       if self._hps.cell_type == "GRU":
         w_reduce_s = tf.get_variable('w_reduce_s', [hidden_dim * 2, hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
         bias_reduce_s = tf.get_variable('bias_reduce_s', [hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
