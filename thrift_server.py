@@ -148,7 +148,7 @@ def main(articles):
   hps = namedtuple("HParams", hps_dict.keys())(**hps_dict)
 
   sess = tf.Session(config=util.get_config())
-  sess.run(tf.initialize_all_variables())
+  sess.run(tf.global_variables_initializer())
 
   # Create a batcher object that will create minibatches of data
   # batcher = Batcher(FLAGS.data_path, vocab, hps, single_pass=FLAGS.single_pass, stop_words=stop_word_ids)
