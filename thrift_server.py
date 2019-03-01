@@ -147,11 +147,6 @@ def main(articles):
       hps_dict[key] = val # add it to the dict
   hps = namedtuple("HParams", hps_dict.keys())(**hps_dict)
 
-  sess = tf.Session(config=util.get_config())
-  sess.run(tf.global_variables_initializer())
-  saver = tf.train.Saver([v for v in tf.all_variables() if "Adagrad" not in v.name])
-  curr_ckpt = util.load_ckpt(saver, sess)
-
   # Create a batcher object that will create minibatches of data
   # batcher = Batcher(FLAGS.data_path, vocab, hps, single_pass=FLAGS.single_pass, stop_words=stop_word_ids)
   batcher = Batcher(articles, vocab, hps, single_pass=FLAGS.single_pass, stop_words=stop_word_ids)
