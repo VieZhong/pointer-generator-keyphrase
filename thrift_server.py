@@ -178,7 +178,7 @@ __PORT = 8080
 
 class KeyphrasesHandler(object):
   def predict(self, articles):
-    article_list = [{"id": a.id, "title": a.title, "text": a.text} for a in articles]
+    article_list = [{"id": a["id"], "title": a["title"], "text": a["text"]} for a in articles]
     decode_results = run_decode(article_list)
     print("\n \n decode_results:")
     print(decode_results)
