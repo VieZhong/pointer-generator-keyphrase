@@ -185,7 +185,10 @@ class KeyphrasesHandler(object):
     return [ttypes.Keyphrase(r["id"], r["keyphrases"]) for r in decode_results]
 
 
-def main():
+def main(unused_argv):
+  if len(unused_argv) != 1: # prints a message if you've entered flags incorrectly
+    raise Exception("Problem with flags: %s" % unused_argv)
+  
   handler = KeyphrasesHandler()
 
   processor = KeyphraseModel.Processor(handler)
