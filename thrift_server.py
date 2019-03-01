@@ -109,7 +109,7 @@ tf.app.flags.DEFINE_boolean('debug', False, "Run in tensorflow's debug mode (wat
 
 
 
-def main(articles):
+def run_decode(articles):
   tf.logging.set_verbosity(tf.logging.INFO) # choose what level of logging you want
   tf.logging.info('Starting seq2seq_attention in %s mode...', (FLAGS.mode))
 
@@ -170,7 +170,7 @@ from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
 from thrift.server import TServer
 
-from tf_app_run import run
+# from tf_app_run import run
 
 
 __HOST = 'localhost'
@@ -179,13 +179,13 @@ __PORT = 8080
 class KeyphrasesHandler(object):
   def predict(self, articles):
     article_list = [{"id": a.id, "title": a.title, "text": a.text} for a in articles]
-    decode_results = run(argv=[article_list])
+    decode_results = run_decode(article_list)
     print("\n \n decode_results:")
     print(decode_results)
     return [ttypes.Keyphrase(r["id"], r["keyphrases"]) for r in decode_results]
 
 
-if __name__ == '__main__':
+def main():
   handler = KeyphrasesHandler()
 
   processor = KeyphraseModel.Processor(handler)
@@ -197,3 +197,6 @@ if __name__ == '__main__':
 
   print('Starting the rpc server at', __HOST,':', __PORT)
   rpcServer.serve()
+
+if __name__ == '__main__':
+  tf.app.run()
