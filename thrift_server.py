@@ -110,6 +110,7 @@ tf.app.flags.DEFINE_boolean('debug', False, "Run in tensorflow's debug mode (wat
 
 
 def main(articles):
+
   tf.logging.set_verbosity(tf.logging.INFO) # choose what level of logging you want
   tf.logging.info('Starting seq2seq_attention in %s mode...', (FLAGS.mode))
 
@@ -145,6 +146,9 @@ def main(articles):
     if key in hparam_list: # if it's in the list
       hps_dict[key] = val # add it to the dict
   hps = namedtuple("HParams", hps_dict.keys())(**hps_dict)
+
+  sess = tf.Session(config=util.get_config())
+  sess.run(tf.initialize_all_variables())
 
   # Create a batcher object that will create minibatches of data
   # batcher = Batcher(FLAGS.data_path, vocab, hps, single_pass=FLAGS.single_pass, stop_words=stop_word_ids)
