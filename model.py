@@ -343,7 +343,7 @@ class SummarizationModel(object):
         decoder_outputs, self._dec_out_state, self.attn_dists, self.p_gens, self.coverage = self._add_decoder(emb_dec_inputs, decoder_input_ids, emb_enc_inputs=(emb_enc_inputs if hps.target_siding_bridge else None))
 
       # Add the output projection to obtain the vocabulary distribution
-      with tf.variable_scope('output_projection'):
+      with tf.variable_scope('output_projection', reuse=tf.AUTO_REUSE):
         w = tf.get_variable('w', [hps.hidden_dim, vsize], dtype=tf.float32, initializer=self.trunc_norm_init)
         w_t = tf.transpose(w)
         v = tf.get_variable('v', [vsize], dtype=tf.float32, initializer=self.trunc_norm_init)
