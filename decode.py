@@ -51,11 +51,11 @@ class BeamSearchDecoder(object):
     self._vocab = vocab
     self._saver = tf.train.Saver() # we use this to load checkpoints for decoding
     self._sess = tf.Session(config=util.get_config())
-    
-    if not FLAGS.decode_only:
-      # Load an initial checkpoint to use for decoding
-      ckpt_path = util.load_ckpt(self._saver, self._sess)
 
+    # Load an initial checkpoint to use for decoding
+    ckpt_path = util.load_ckpt(self._saver, self._sess)
+
+    if not FLAGS.decode_only:
       if FLAGS.single_pass:
         # Make a descriptive decode directory name
         ckpt_name = "ckpt-" + ckpt_path.split('-')[-1] # this is something of the form "ckpt-123456"
