@@ -157,7 +157,7 @@ class Vocab(object):
         writer.writerow({"word": self._id_to_word[i]})
 
 
-def example_generator(data_path_or_data, single_pass, decode_only, lang):
+def example_generator(data_path, single_pass, decode_only, lang):
   """Generates tf.Examples from data files.
 
     Binary data format: <length><blob>. <length> represents the byte size
@@ -176,25 +176,26 @@ def example_generator(data_path_or_data, single_pass, decode_only, lang):
   if decode_only:
     """every line in the file should like:
     {"title": "__title__", text: "__article__"}
-
     Yields:
       Deserialized tf.Example.
     """
-    articles = data_path_or_data
-    for result in articles:
-      if "title" in result and "text" in result:
-        text = result["title"] + " " + result["text"]
-        text_id = "xxx"
-        if "id" in result:
-          text_id = result["id"]
-          if lang == 'english':
-            text = ' '.join(word_tokenize(text.lower()))
-          elif lang == 'chinese':
-            text = ' '.join(jieba.cut(text))
-        yield (text, text_id)
+    with open(data_path, "r", encoding='utf-8') as f:
+      for line in f:
+        line = line.strip()
+        if line:
+          result = json.loads(line)
+          if "title" in result and "text" in result:
+            text = result["title"] + " " + result["text"]
+            text_id = "xxx"
+            if "id" in result:
+              text_id = result["id"]
+              if lang == 'english':
+                text = ' '.join(word_tokenize(text.lower()))
+              elif lang == 'chinese':
+                text = ' '.join(jieba.cut(text))
+            yield (text, text_id)
   else:
     while True:
-      data_path = data_path_or_data
       filelist = glob.glob(data_path) # get the list of datafiles
       assert filelist, ('Error: Empty filelist at %s' % data_path) # check filelist isn't empty
       if single_pass:

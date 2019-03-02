@@ -76,6 +76,9 @@ class BeamSearchDecoder(object):
         self._rouge_dec_dir = os.path.join(self._decode_dir, "decoded")
         if not os.path.exists(self._rouge_dec_dir): os.mkdir(self._rouge_dec_dir)
 
+    else:
+      self._decode_dir = os.path.dirname(FLAGS.data_path)
+
 
   def decode(self):
     """Decode examples until data is exhausted (if FLAGS.single_pass) and return, or decode indefinitely, loading latest checkpoint at regular intervals"""
@@ -93,8 +96,7 @@ class BeamSearchDecoder(object):
           f1_score = f1_score_eval(self._rouge_ref_dir, self._rouge_dec_dir)
           f1_score_log(f1_score, self._decode_dir)
         else:
-          # write_decode_result_in_file(decode_result, self._decode_dir)
-          return decode_result
+          write_decode_result_in_file(decode_result, self._decode_dir)
         return
 
       original_article = batch.original_articles[0]  # string
@@ -373,8 +375,8 @@ def hashhex(s):
   return h.hexdigest()
 
 
-# def write_decode_result_in_file(result, dir_to_write):
-#   with open(os.path.join(dir_to_write, "decode.txt"), "w", encoding="utf-8") as f:
-#     for r in result:
-#       f.write("%s\n" % r)
+def write_decode_result_in_file(result, dir_to_write):
+  with open(os.path.join(dir_to_write, "tmp_ouput.txt"), "w", encoding="utf-8") as f:
+    for r in result:
+      f.write("%s\n" % json.dumps(r, ensure_ascii=False))
     

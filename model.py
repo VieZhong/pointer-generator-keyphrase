@@ -139,7 +139,7 @@ class SummarizationModel(object):
       state: LSTMStateTuple with hidden_dim units.
     """
     hidden_dim = self._hps.hidden_dim
-    with tf.variable_scope('reduce_final_st', reuse=tf.AUTO_REUSE):
+    with tf.variable_scope('reduce_final_st'):
       if self._hps.cell_type == "GRU":
         w_reduce_s = tf.get_variable('w_reduce_s', [hidden_dim * 2, hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
         bias_reduce_s = tf.get_variable('bias_reduce_s', [hidden_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
@@ -306,7 +306,7 @@ class SummarizationModel(object):
       self.trunc_norm_init = tf.truncated_normal_initializer(stddev=hps.trunc_norm_init_std)
 
       # Add embedding matrix (shared by the encoder and decoder inputs)
-      with tf.variable_scope('embedding', reuse=tf.AUTO_REUSE):
+      with tf.variable_scope('embedding'):
         embedding = tf.get_variable('embedding', [vsize, hps.emb_dim], dtype=tf.float32, initializer=self.trunc_norm_init)
         if hps.mode=="train": self._add_emb_vis(embedding) # add to tensorboard
         emb_enc_inputs = tf.nn.embedding_lookup(embedding, self._enc_batch) # tensor with shape (batch_size, max_enc_steps, emb_size)
@@ -343,7 +343,7 @@ class SummarizationModel(object):
         decoder_outputs, self._dec_out_state, self.attn_dists, self.p_gens, self.coverage = self._add_decoder(emb_dec_inputs, decoder_input_ids, emb_enc_inputs=(emb_enc_inputs if hps.target_siding_bridge else None))
 
       # Add the output projection to obtain the vocabulary distribution
-      with tf.variable_scope('output_projection', reuse=tf.AUTO_REUSE):
+      with tf.variable_scope('output_projection'):
         w = tf.get_variable('w', [hps.hidden_dim, vsize], dtype=tf.float32, initializer=self.trunc_norm_init)
         w_t = tf.transpose(w)
         v = tf.get_variable('v', [vsize], dtype=tf.float32, initializer=self.trunc_norm_init)

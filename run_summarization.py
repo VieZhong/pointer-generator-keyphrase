@@ -33,7 +33,7 @@ from tensorflow.python import debug as tf_debug
 FLAGS = tf.app.flags.FLAGS
 
 # Where to find data
-tf.app.flags.DEFINE_string('data_path', '/project/data/test_for_generator_keyphrase/finished_files/chunked/train_*', 'Path expression to tf.Example datafiles. Can include wildcards to access multiple datafiles.')
+tf.app.flags.DEFINE_string('data_path', '/tmp/tmp_input.txt', 'Path expression to tf.Example datafiles. Can include wildcards to access multiple datafiles.')
 tf.app.flags.DEFINE_string('vocab_path', '/project/data/test_for_generator_keyphrase/finished_files/vocab', 'Path expression to text vocabulary file.')
 tf.app.flags.DEFINE_string('stop_words_path', '/project/data/stopword/stopword_en.txt', 'Path expression to stop words file')
 tf.app.flags.DEFINE_string('ref_dir', '/data/__DATASET__/val_reference/', 'Path to reference words')
