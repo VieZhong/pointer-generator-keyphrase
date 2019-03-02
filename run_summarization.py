@@ -39,9 +39,9 @@ tf.app.flags.DEFINE_string('stop_words_path', '/project/data/stopword/stopword_e
 tf.app.flags.DEFINE_string('ref_dir', '/data/__DATASET__/val_reference/', 'Path to reference words')
 
 # Important settings
-tf.app.flags.DEFINE_string('mode', 'train', 'must be one of train/eval/decode')
-tf.app.flags.DEFINE_boolean('single_pass', False, 'For decode mode only. If True, run eval on the full dataset using a fixed checkpoint, i.e. take the current checkpoint, and use it to produce one summary for each example in the dataset, write the summaries to file and then get ROUGE scores for the whole dataset. If False (default), run concurrent decoding, i.e. repeatedly load latest checkpoint, use it to produce summaries for randomly-chosen examples and log the results to screen, indefinitely.')
-tf.app.flags.DEFINE_boolean('decode_only', False, 'If True, only decode, do not calculate f1 score. only for chinese, only for special format data_path')
+tf.app.flags.DEFINE_string('mode', 'decode', 'must be one of train/eval/decode')
+tf.app.flags.DEFINE_boolean('single_pass', True, 'For decode mode only. If True, run eval on the full dataset using a fixed checkpoint, i.e. take the current checkpoint, and use it to produce one summary for each example in the dataset, write the summaries to file and then get ROUGE scores for the whole dataset. If False (default), run concurrent decoding, i.e. repeatedly load latest checkpoint, use it to produce summaries for randomly-chosen examples and log the results to screen, indefinitely.')
+tf.app.flags.DEFINE_boolean('decode_only', True, 'If True, only decode, do not calculate f1 score. only for chinese, only for special format data_path')
 
 # Where to save output
 tf.app.flags.DEFINE_string('log_root', '/tmp/test-pointer-generater/log/', 'Root directory for all logging.')
