@@ -45,8 +45,8 @@ tf.app.flags.DEFINE_boolean('decode_only', True, 'If True, only decode, do not c
 
 # Where to save output
 tf.app.flags.DEFINE_string('log_root', '/tmp/test-pointer-generater/log/', 'Root directory for all logging.')
-tf.app.flags.DEFINE_string('exp_name', 'test_test_thrift_experiment', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
-tf.app.flags.DEFINE_string('language', 'english', 'language')
+tf.app.flags.DEFINE_string('exp_name', 'nssd_COPM_experiment', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
+tf.app.flags.DEFINE_string('language', 'chinese', 'language')
 
 # Encoder and decoder settings
 tf.app.flags.DEFINE_string('cell_type', 'LSTM', 'LSTM or GRU')
