@@ -357,7 +357,7 @@ def hashhex(s):
   return h.hexdigest()
 
 # 获取单向词共现矩阵
-def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=False):
+def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=False, top_ten_kept=False):
 
   h = hashhex('-'.join([str(x) for x in words]))
   if h in co_matrix_store:
@@ -374,7 +374,7 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
         result.append([wd_ids[i], wd_ids[j]])
     return result
 
-  def get_matrix(words, top_ten_kept=False):
+  def get_matrix(words):
 
     length = len(words)
     words_no_stop = [x for x in words if is_ok(x)]
