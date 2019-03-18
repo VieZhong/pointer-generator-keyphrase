@@ -357,7 +357,7 @@ def hashhex(s):
   return h.hexdigest()
 
 # 获取单向词共现矩阵
-def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=False):
+def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=False, top_ten_kept=False):
 
   h = hashhex('-'.join([str(x) for x in words]))
   if h in co_matrix_store:
@@ -405,7 +405,10 @@ def get_cooccurrence_matrix(words, win_size=3, exclude_words=[], need_weight=Fal
             id2 = words_set.index(w2)
             result_matrix[i][j] = matrix[id1][id2]
 
-    result_matrix = softmax(result_matrix)
+    if top_ten_kept:
+      result_matrix = top_ten_softmax(result_matrix)
+    else:
+      result_matrix = softmax(result_matrix)
     for i, w1 in enumerate(words):
       if not is_ok(w1):
         result_matrix[i] = np.zeros((length), dtype=np.float32)
@@ -434,22 +437,38 @@ def get_stop_word_ids(path, vocab):
   stop_word_ids.extend([vocab.word2id(w) for w in stop_words])
   return list(set(stop_word_ids))
 
+def top_ten_softmax(m):
+  assert len(m.shape) < 3
+
+  result = np.zeros(m.shape, dtype=np.float32)
+  if len(m.shape) == 2:
+    for i, x in enumerate(m):
+      result[i] = top_ten_softmax(x)
+    return result
+
+  sorted_m_index = np.argsort(-m)[:10]
+  sorted_m = m[sorted_m_index]
+  softmax_m = softmax(sorted_m)
+  for i, idx in enumerate(sorted_m_index):
+    result[idx] = softmax_m[i]
+  return result
+
 
 def softmax(z):
-    assert len(z.shape) < 3
-    
-    if len(z.shape) == 2:
-      s = np.max(z, axis=1)
-      s = s[:, np.newaxis] # necessary step to do broadcasting
-      e_x = np.exp(z - s)
-      div = np.sum(e_x, axis=1)
-      div = div[:, np.newaxis] # dito
-      return e_x / div
+  assert len(z.shape) < 3
+  
+  if len(z.shape) == 2:
+    s = np.max(z, axis=1)
+    s = s[:, np.newaxis] # necessary step to do broadcasting
+    e_x = np.exp(z - s)
+    div = np.sum(e_x, axis=1)
+    div = div[:, np.newaxis] # dito
+    return e_x / div
 
-    z = z - np.max(z)
-    exp_x = np.exp(z)
-    softmax_x = exp_x / np.sum(exp_x)
-    return softmax_x
+  z = z - np.max(z)
+  exp_x = np.exp(z)
+  softmax_x = exp_x / np.sum(exp_x)
+  return softmax_x
 
 
 def get_weight_from_matrix(matrix):

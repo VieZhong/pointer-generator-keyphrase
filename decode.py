@@ -133,6 +133,8 @@ class BeamSearchDecoder(object):
               continue
           if not len(decoded_words_1) or (len(decoded_words) and decoded_words_1[0] in [words[0] for words in decoded_words]):
             continue
+          if '[UNK]' in decoded_words_1:
+            continue
           decoded_words.append(decoded_words_1)
       decoded_output = ' '.join(flat(decoded_words)) # single string          
 
@@ -149,7 +151,7 @@ class BeamSearchDecoder(object):
       # decoded_output = ' '.join(decoded_words) # single string
       if FLAGS.decode_only:
         result = []
-        for words in decoded_words[:8]:
+        for words in decoded_words[:10]:
           result.append(''.join(words) if FLAGS.language == 'chinese' else ' '.join(words))
         decode_result.append({"id": original_abstract_sents[0], "keyphrases": ';'.join(result)})
       elif FLAGS.single_pass:

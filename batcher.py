@@ -68,7 +68,7 @@ class Example(object):
       # Store a version of the enc_input where in-article OOVs are represented by their temporary OOV id; also store the in-article OOVs words themselves
       self.enc_input_extend_vocab, self.article_oovs = data.article2ids(article_words, vocab)
       if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h or hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention or hps.markov_attention_contribution:
-        self.cooccurrence_matrix, self.cooccurrence_weight = data.get_cooccurrence_matrix(self.enc_input_extend_vocab, win_size=hps.occurrence_window_size, exclude_words=stop_words, need_weight=(hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention or hps.markov_attention_contribution))
+        self.cooccurrence_matrix, self.cooccurrence_weight = data.get_cooccurrence_matrix(self.enc_input_extend_vocab, win_size=hps.occurrence_window_size, exclude_words=stop_words, need_weight=(hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention or hps.markov_attention_contribution), top_ten_kept=hps.top_ten_kept)
       # Get a verison of the reference summary where in-article OOVs are represented by their temporary article OOV id
       abs_ids_extend_vocab = data.abstract2ids(abstract_words, vocab, self.article_oovs)
 
