@@ -125,7 +125,7 @@ class BeamSearchDecoder(object):
           # Remove the [STOP] token from decoded_words, if necessary
           while len(decoded_words_1) and decoded_words_1[0] in [',', '.', '-lrb-', data.STOP_DECODING]:
             decoded_words_1 = decoded_words_1[1:]
-          while len(decoded_words_1) and decoded_words_1[-1] in ['）', ')', '"']:
+          while len(decoded_words_1) and decoded_words_1[-1] in ['）', ')', '"', '“', '”']:
             decoded_words_1 = decoded_words_1[:-1]
           for symbol in [',', '.', '-lrb-', data.STOP_DECODING]:
             try:
