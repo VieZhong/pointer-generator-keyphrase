@@ -8,7 +8,7 @@ import json
 import os
 import subprocess
 
-__HOST = 'localhost'
+__HOST = '192.168.101.4'
 __PORT = 8080
 
 __DATA_PATH = '/tmp'

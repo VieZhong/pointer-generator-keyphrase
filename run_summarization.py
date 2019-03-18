@@ -44,7 +44,7 @@ tf.app.flags.DEFINE_boolean('single_pass', True, 'For decode mode only. If True,
 tf.app.flags.DEFINE_boolean('decode_only', True, 'If True, only decode, do not calculate f1 score. only for chinese, only for special format data_path')
 
 # Where to save output
-tf.app.flags.DEFINE_string('log_root', '/tmp/test-pointer-generater/log/', 'Root directory for all logging.')
+tf.app.flags.DEFINE_string('log_root', '/project/pointer-generator-keyphrase/model/', 'Root directory for all logging.')
 tf.app.flags.DEFINE_string('exp_name', 'nssd_COPM_experiment', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
 tf.app.flags.DEFINE_string('language', 'chinese', 'language')
 
@@ -58,7 +58,7 @@ tf.app.flags.DEFINE_integer('emb_dim', 128, 'dimension of word embeddings')
 tf.app.flags.DEFINE_integer('batch_size', 16, 'minibatch size')
 tf.app.flags.DEFINE_integer('max_enc_steps', 400, 'max timesteps of encoder (max source text tokens)')
 tf.app.flags.DEFINE_integer('max_dec_steps', 6, 'max timesteps of decoder (max summary tokens)')
-tf.app.flags.DEFINE_integer('beam_size', 200, 'beam size for beam search decoding.')
+tf.app.flags.DEFINE_integer('beam_size', 50, 'beam size for beam search decoding.')
 tf.app.flags.DEFINE_integer('beam_depth', 6, 'beam depth for beam search decoding')
 tf.app.flags.DEFINE_integer('min_dec_steps', 1, 'Minimum sequence length of generated summary. Applies only for beam search decoding mode')
 tf.app.flags.DEFINE_integer('vocab_size', 50000, 'Size of vocabulary. These will be read from the vocabulary file in order. If the vocabulary file contains fewer words than this number, or if this number is set to 0, will take all words in the vocabulary file.')
