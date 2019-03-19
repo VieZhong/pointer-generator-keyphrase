@@ -155,7 +155,7 @@ class BeamSearchDecoder(object):
           result.append(''.join(words) if FLAGS.language == 'chinese' else ' '.join(words))
         decode_result.append({"id": original_abstract_sents[0], "keyphrases": ';'.join(result)})
         counter += 1
-        tf.logging.info("We\'ve been decoded %i articles", counter)
+        tf.logging.info("We\'ve been decoded %i articles.", counter)
       elif FLAGS.single_pass:
         self.write_for_f1_eval(original_abstract_sents, decoded_words, counter) # write ref summary and decoded summary to file, to eval with pyrouge later
         counter += 1 # this is how many examples we've decoded
