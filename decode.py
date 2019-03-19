@@ -380,7 +380,8 @@ def hashhex(s):
 
 
 def write_decode_result_in_file(result, dir_to_write):
-  with open(os.path.join(dir_to_write, "tmp_output.txt"), "w", encoding="utf-8") as f:
+  output_file_name = os.path.basename(FLAGS.data_path).replace("input", "output")
+  with open(os.path.join(dir_to_write, output_file_name), "w", encoding="utf-8") as f:
     for r in result:
       f.write("%s\n" % json.dumps(r, ensure_ascii=False))
     
