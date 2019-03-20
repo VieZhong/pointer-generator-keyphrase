@@ -8,23 +8,23 @@ import json
 import os
 import subprocess
 
-__HOST = '192.168.101.4'
-__PORT = 8080
+HOST = '192.168.101.4'
+PORT = 8084
 
-__DATA_PATH = '/tmp'
-__INPUT_FILE = 'tmp_input.txt'
-__OUTPUT_FILE = 'tmp_output.txt'
+DATA_PATH = '/tmp'
+INPUT_FILE = 'tmp_input_%i.txt' % PORT
+OUTPUT_FILE = 'tmp_output_%i.txt' % PORT
 
 
 def write_to_input_file(article_list):
-  with open(os.path.join(__DATA_PATH, __INPUT_FILE), "w", encoding='utf-8') as writer:
+  with open(os.path.join(DATA_PATH, INPUT_FILE), "w", encoding='utf-8') as writer:
     for article in article_list:
       writer.write("%s\n" % json.dumps({"title": article["title"], "text": article["text"], "id": article["id"]}, ensure_ascii=False))
 
 
 def read_from_output_file():
   results = []
-  with open(os.path.join(__DATA_PATH, __OUTPUT_FILE), "r", encoding='utf-8') as lines:
+  with open(os.path.join(DATA_PATH, OUTPUT_FILE), "r", encoding='utf-8') as lines:
     for line in lines:
       line = line.strip()
       if line:
@@ -40,7 +40,7 @@ class KeyphrasesHandler(object):
     write_to_input_file(article_list)
 
     try:
-      subprocess.check_call(["python", "run_summarization.py"])
+      subprocess.check_call(["python", "run_summarization.py", "--data_path=%s" % os.path.join(DATA_PATH, INPUT_FILE)])
     except subprocess.CalledProcessError:
       return []
 
@@ -53,11 +53,11 @@ if __name__ == '__main__':
   handler = KeyphrasesHandler()
 
   processor = KeyphraseModel.Processor(handler)
-  transport = TSocket.TServerSocket(__HOST, __PORT)
+  transport = TSocket.TServerSocket(HOST, PORT)
   tfactory = TTransport.TBufferedTransportFactory()
   pfactory = TBinaryProtocol.TBinaryProtocolFactory()
 
   rpcServer = TServer.TSimpleServer(processor,transport, tfactory, pfactory)
 
-  print('Starting the rpc server at', __HOST,':', __PORT)
+  print('Starting the rpc server at', HOST,':', PORT)
   rpcServer.serve()
