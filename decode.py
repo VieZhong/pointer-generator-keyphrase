@@ -367,6 +367,8 @@ def get_decode_dir_name(ckpt_name):
     dirname += '_generation'
   elif FLAGS.copy_only:
     dirname += '_copy'
+  elif FLAGS.copy_only_after_generation:
+    dirname += '_copy_after_generation'
   if ckpt_name is not None:
     dirname += "_%s" % ckpt_name
   return dirname

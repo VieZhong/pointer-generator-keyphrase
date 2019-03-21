@@ -226,7 +226,9 @@ class SummarizationModel(object):
         p_r = 0.2
         attn_dists = [(1 - p_gen) * (1 - p_r) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
       else:
-        if not self._hps.copy_only:
+        if self._hps.copy_only_after_generation:
+          attn_dists[0] = (1 - self.p_gens[0]) * attn_dists[0]
+        elif not self._hps.copy_only: 
           attn_dists = [(1 - p_gen) * dist for (p_gen, dist) in zip(self.p_gens, attn_dists)]
 
       # Concatenate some zeros to each vocabulary dist, to hold the probabilities for in-article OOV words
@@ -272,6 +274,9 @@ class SummarizationModel(object):
           final_dists = vocab_dists_extended
         elif self._hps.copy_only:
           final_dists = attn_dists_projected
+        elif self._hps.copy_only_after_generation:
+          final_dists = attn_dists_projected
+          final_dists[0] = vocab_dists_extended[0] + attn_dists_projected[0]
         else:
           final_dists = [vocab_dist + copy_dist for (vocab_dist, copy_dist) in zip(vocab_dists_extended, attn_dists_projected)]
 

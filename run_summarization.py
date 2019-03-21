@@ -44,7 +44,7 @@ tf.app.flags.DEFINE_boolean('single_pass', True, 'For decode mode only. If True,
 tf.app.flags.DEFINE_boolean('decode_only', True, 'If True, only decode, do not calculate f1 score. only for chinese, only for special format data_path')
 
 # Where to save output
-tf.app.flags.DEFINE_string('log_root', '/project/pointer-generator-keyphrase/model/', 'Root directory for all logging.')
+tf.app.flags.DEFINE_string('log_root', '/tmp/test-pointer-generater/log/', 'Root directory for all logging.')
 tf.app.flags.DEFINE_string('exp_name', 'nssd_COPM_experiment', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
 tf.app.flags.DEFINE_string('language', 'chinese', 'language')
 
@@ -58,7 +58,7 @@ tf.app.flags.DEFINE_integer('emb_dim', 128, 'dimension of word embeddings')
 tf.app.flags.DEFINE_integer('batch_size', 16, 'minibatch size')
 tf.app.flags.DEFINE_integer('max_enc_steps', 400, 'max timesteps of encoder (max source text tokens)')
 tf.app.flags.DEFINE_integer('max_dec_steps', 6, 'max timesteps of decoder (max summary tokens)')
-tf.app.flags.DEFINE_integer('beam_size', 50, 'beam size for beam search decoding.')
+tf.app.flags.DEFINE_integer('beam_size', 200, 'beam size for beam search decoding.')
 tf.app.flags.DEFINE_integer('beam_depth', 6, 'beam depth for beam search decoding')
 tf.app.flags.DEFINE_integer('min_dec_steps', 1, 'Minimum sequence length of generated summary. Applies only for beam search decoding mode')
 tf.app.flags.DEFINE_integer('vocab_size', 50000, 'Size of vocabulary. These will be read from the vocabulary file in order. If the vocabulary file contains fewer words than this number, or if this number is set to 0, will take all words in the vocabulary file.')
@@ -100,6 +100,7 @@ tf.app.flags.DEFINE_boolean('top_ten_kept', False, 'Whether to use top_ten_kept 
 
 tf.app.flags.DEFINE_boolean('generation_only', False, 'Whether in generation mode only')
 tf.app.flags.DEFINE_boolean('copy_only', False, 'Whether in copy mode only')
+tf.app.flags.DEFINE_boolean('copy_only_after_generation', False, 'Whether in copy mode only after generation')
 
 # Utility flags, for restoring and changing checkpoints
 tf.app.flags.DEFINE_boolean('convert_to_coverage_model', False, 'Convert a non-coverage model to a coverage model. Turn this on and run in train mode. Your current training model will be copied to a new version (same name with _cov_init appended) that will be ready to run with coverage flag turned on, for the coverage training stage.')
@@ -334,7 +335,7 @@ def main(unused_argv):
   #   raise Exception("The co_occurrence flag should be True when the prev_relation flag is True")
 
   # Make a namedtuple hps, containing the values of the hyperparameters that the model needs
-  hparam_list = ['top_ten_kept', 'decode_only', 'generation_only', 'copy_only', 'occurrence_window_size', 'max_title_len', 'title_engaged', 'title_guided', 'ref_dir', 'tagger_encoding', 'tagger_attention', 'source_siding_bridge', 'target_siding_bridge', 'language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'beam_depth', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'attention_weighted', 'coverage', 'coverage_weighted', 'coverage_weighted_expansion', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'co_occurrence_i', 'cov_loss_wt', 'pointer_gen', 'cell_type', 'markov_attention', 'markov_attention_contribution', 'markov_attention_contribution_used_x']
+  hparam_list = ['top_ten_kept', 'decode_only', 'generation_only', 'copy_only', 'copy_only_after_generation', 'occurrence_window_size', 'max_title_len', 'title_engaged', 'title_guided', 'ref_dir', 'tagger_encoding', 'tagger_attention', 'source_siding_bridge', 'target_siding_bridge', 'language', 'dropout', 'optimizer', 'mode', 'lr', 'adagrad_init_acc', 'rand_unif_init_mag', 'trunc_norm_init_std', 'max_grad_norm', 'hidden_dim', 'emb_dim', 'batch_size', 'beam_depth', 'max_dec_steps', 'max_enc_steps', 'max_keyphrase_num', 'attention_weighted', 'coverage', 'coverage_weighted', 'coverage_weighted_expansion', 'co_occurrence', 'prev_relation', 'co_occurrence_h', 'co_occurrence_i', 'cov_loss_wt', 'pointer_gen', 'cell_type', 'markov_attention', 'markov_attention_contribution', 'markov_attention_contribution_used_x']
   hps_dict = {}
   for key,val in FLAGS.__flags.items(): # for each flag
     if key in hparam_list: # if it's in the list
