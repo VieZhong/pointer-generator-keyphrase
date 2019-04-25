@@ -14,26 +14,19 @@
 
 ## 模型训练
 
-```
-python run_summarization.py --mode=train --data_path=/path/to/chunked/train_* --vocab_path=/path/to/vocab --log_root=/path/to/a/log/directory --exp_name=myexperiment --decode_only=False
-```
+    python run_summarization.py --mode=train --data_path=/path/to/chunked/train_* --vocab_path=/path/to/vocab --log_root=/path/to/a/log/directory --exp_name=myexperiment --decode_only=False
+
 
 ## 模型验证
 
-```
-python run_summarization.py --mode=eval --data_path=/path/to/chunked/val_* --vocab_path=/path/to/vocab --log_root=/path/to/a/log/directory --exp_name=myexperiment --decode_only=False
-```
+    python run_summarization.py --mode=eval --data_path=/path/to/chunked/val_* --vocab_path=/path/to/vocab --log_root=/path/to/a/log/directory --exp_name=myexperiment --decode_only=False
 
 ## 模型测试
 
-```
-python run_summarization.py --mode=decode --data_path=/path/to/chunked/decode_* --vocab_path=/path/to/vocab --log_root=/path/to/a/log/directory --exp_name=myexperiment --decode_only=False
-```
+    python run_summarization.py --mode=decode --data_path=/path/to/chunked/decode_* --vocab_path=/path/to/vocab --log_root=/path/to/a/log/directory --exp_name=myexperiment --decode_only=False
 
 ## 启动 Thrift Server
 
 在运行下面脚本时，请确保模型处于decode模式，并且decode_only与single_pass均为True。
 
-```
-python thrift_server.py
-```
+    python thrift_server.py
