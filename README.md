@@ -10,6 +10,8 @@
 
 处理数据的代码，英文数据可参考data-preprocessing/make_datafiles_kp20k.py，中文数据可参考data-processing/make_datafiles_nssd.py。
 
+FTP上有Thrift Server所需要的用nssd数据集预训练好的模型，目录为：ftp://zhongyw@192.168.88.210/engr/01.research/11.钟远维-中文词嵌入与关键词提取/2.关键字提取（Keyword Extraction）/4.实验数据及代码/实验模型/，下载后并解压至参数log_root目录下，即可使用。
+
 # 项目运行
 
 ## 模型训练
