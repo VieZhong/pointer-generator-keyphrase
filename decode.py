@@ -86,6 +86,7 @@ class BeamSearchDecoder(object):
     counter = 0
     hashList = []
     decode_result = []
+    probs_result = []
     while True:
       batch = self._batcher.next_batch()  # 1 example repeated across batch
       if batch is None: # finished decoding dataset in single_pass mode
@@ -97,6 +98,7 @@ class BeamSearchDecoder(object):
           f1_score_log(f1_score, self._decode_dir)
         else:
           write_decode_result_in_file(decode_result, self._decode_dir)
+          write_probs_result_in_file(probs_result, self._decode_dir)
         return
 
       original_article = batch.original_articles[0]  # string
@@ -116,19 +118,29 @@ class BeamSearchDecoder(object):
       best_hyp = all_hyp[0]
 
       decoded_words = []
+      probs_log = []
       for hyp in all_hyp:
         if len(decoded_words) < DECODE_MAX_NUM:
           # Extract the output ids from the hypothesis and convert back to words
           output_ids = [int(t) for t in hyp.tokens[1:]]
+          log_probs = hyp.log_probs[1:]
+          cpy_probs = hyp.cpy_probs[1:]
+          gen_probs = hyp.gen_probs[1:]
           decoded_words_1 = data.outputids2words(output_ids, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None))
 
           # Remove the [STOP] token from decoded_words, if necessary
           while len(decoded_words_1) and decoded_words_1[0] in [',', '.', '-lrb-', data.STOP_DECODING]:
             decoded_words_1 = decoded_words_1[1:]
+            log_probs = hyp.log_probs[1:]
+            cpy_probs = hyp.cpy_probs[1:]
+            gen_probs = hyp.gen_probs[1:]
           for symbol in [',', '.', '-lrb-', data.STOP_DECODING]:
             try:
               stop_idx = decoded_words_1.index(symbol) # index of the (first) [STOP] symbol
               decoded_words_1 = decoded_words_1[:stop_idx]
+              log_probs = hyp.log_probs[:stop_idx]
+              cpy_probs = hyp.cpy_probs[:stop_idx]
+              gen_probs = hyp.gen_probs[:stop_idx]
             except ValueError:
               continue
           if not len(decoded_words_1) or (len(decoded_words) and decoded_words_1[0] in [words[0] for words in decoded_words]) or '[UNK]' in decoded_words_1 or '<digit>' in decoded_words_1:
@@ -136,6 +148,12 @@ class BeamSearchDecoder(object):
           if len(decoded_words_1) == 1 and ('“' == decoded_words_1[0] or '”' == decoded_words_1[0]):
             continue
           decoded_words.append(decoded_words_1)
+          probs_log.append({
+            "words": decoded_words_1,
+            "log_probs": log_probs,
+            "cpy_probs": cpy_probs,
+            "gen_probs": gen_probs
+          })
       decoded_output = ' '.join(flat(decoded_words)) # single string          
 
       # # Extract the output ids from the hypothesis and convert back to words
@@ -154,6 +172,7 @@ class BeamSearchDecoder(object):
         for words in decoded_words[:10]:
           result.append(''.join(words) if FLAGS.language == 'chinese' else ' '.join(words))
         decode_result.append({"id": original_abstract_sents[0], "keyphrases": ';'.join(result)})
+        probs_result.append(probs_log)
         counter += 1
         tf.logging.info("We\'ve been decoded %i articles.", counter)
       elif FLAGS.single_pass:
@@ -384,4 +403,14 @@ def write_decode_result_in_file(result, dir_to_write):
   with open(os.path.join(dir_to_write, output_file_name), "w", encoding="utf-8") as f:
     for r in result:
       f.write("%s\n" % json.dumps(r, ensure_ascii=False))
-    
+
+
+def write_probs_result_in_file(result, dir_to_write)
+  output_file_name = os.path.basename(FLAGS.data_path).replace("input", "logs")
+  with open(os.path.join(dir_to_write, output_file_name), "w", encoding="utf-8") as f:
+    for idx, r in enumerate(result):
+      f.write("第%i篇文章：\n" % idx)
+      f.write("预测词语： %s \n" % r["words"].join(" "))
+      f.write("最终概率： %s \n" % r["log_probs"].join(" "))
+      f.write("生成概率： %s \n" % r["gen_probs"].join(" "))
+      f.write("抽取概率： %s \n\n\n" % r["cpy_probs"].join(" "))

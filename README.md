@@ -18,7 +18,6 @@ FTP上有Thrift Server所需要的用nssd数据集预训练好的模型，目录
 
     python run_summarization.py --mode=train --data_path=/path/to/chunked/train_* --vocab_path=/path/to/vocab --log_root=/path/to/a/log/directory --exp_name=myexperiment --decode_only=False
 
-
 ## 模型验证
 
     python run_summarization.py --mode=eval --data_path=/path/to/chunked/val_* --vocab_path=/path/to/vocab --log_root=/path/to/a/log/directory --exp_name=myexperiment --decode_only=False

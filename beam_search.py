@@ -25,7 +25,7 @@ FLAGS = tf.app.flags.FLAGS
 class Hypothesis(object):
   """Class to represent a hypothesis during beam search. Holds all the information needed for the hypothesis."""
 
-  def __init__(self, tokens, log_probs, state, attn_dists, p_gens, coverage):
+  def __init__(self, tokens, log_probs, state, attn_dists, p_gens, coverage, gen_probs, cpy_probs):
     """Hypothesis constructor.
 
     Args:
@@ -42,8 +42,10 @@ class Hypothesis(object):
     self.attn_dists = attn_dists
     self.p_gens = p_gens
     self.coverage = coverage
+    self.gen_probs = gen_probs
+    self.cpy_probs = cpy_probs
 
-  def extend(self, token, log_prob, state, attn_dist, p_gen, coverage):
+  def extend(self, token, log_prob, state, attn_dist, p_gen, coverage, gen_prob, cpy_prob):
     """Return a NEW hypothesis, extended with the information from the latest step of beam search.
 
     Args:
@@ -61,7 +63,9 @@ class Hypothesis(object):
                       state = state,
                       attn_dists = self.attn_dists + [attn_dist],
                       p_gens = self.p_gens + [p_gen],
-                      coverage = coverage)
+                      coverage = coverage,
+                      gen_probs = self.gen_probs + [gen_prob],
+                      cpy_probs = self.cpy_probs + [cpy_prob])
 
   @property
   def latest_token(self):
@@ -115,7 +119,7 @@ def run_beam_search(sess, model, vocab, batch):
     if FLAGS.markov_attention or FLAGS.markov_attention_contribution:
       prev_attn_dist = [h.attn_dists[-1] for h in hyps] if steps > 0 else batch.cooccurrence_weight
     # Run one step of the decoder to get the new info
-    (topk_ids, topk_log_probs, new_states, attn_dists, p_gens, new_coverage) = model.decode_onestep(sess=sess,
+    (topk_ids, topk_log_probs, new_states, attn_dists, p_gens, new_coverage, gen_probs, cpy_probs) = model.decode_onestep(sess=sess,
                         batch=batch,
                         latest_tokens=latest_tokens,
                         enc_states=enc_states,
@@ -136,7 +140,9 @@ def run_beam_search(sess, model, vocab, batch):
                            state=new_state,
                            attn_dist=attn_dist,
                            p_gen=p_gen,
-                           coverage=new_coverage_i)
+                           coverage=new_coverage_i,
+                           gen_prob=gen_probs[i, j],
+                           cpy_prob=cpy_probs[i, j])
         all_hyps.append(new_hyp)
 
     # Filter and collect any hypotheses that have produced the end token.
