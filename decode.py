@@ -412,7 +412,7 @@ def write_probs_result_in_file(result, dir_to_write):
       f.write("第%i篇文章：\n\n" % (idx + 1))
       for i, r in enumerate(rs):
         f.write("预测词%i： %s \n" % (i + 1, " ".join(r["words"])))
-        f.write("最终概率： %s \n" % " ".join(r["log_probs"]))
-        f.write("生成概率： %s \n" % " ".join(r["gen_probs"]))
-        f.write("抽取概率： %s \n\n" % " ".join(r["cpy_probs"]))
+        f.write("最终概率： %s \n" % " ".join([str(t) for t in r["log_probs"]]))
+        f.write("生成概率： %s \n" % " ".join([str(t) for t in r["gen_probs"]]))
+        f.write("抽取概率： %s \n" % " ".join([str(t) for t in r["cpy_probs"]]))
       f.write("\n\n\n\n")
