@@ -142,8 +142,8 @@ def run_beam_search(sess, model, vocab, batch):
                            attn_dist=attn_dist,
                            p_gen=p_gen,
                            coverage=new_coverage_i,
-                           gen_prob=gen_probs[i, j],
-                           cpy_prob=cpy_probs[i, j])
+                           gen_prob=gen_probs[i][j],
+                           cpy_prob=cpy_probs[i][j])
         all_hyps.append(new_hyp)
 
     # Filter and collect any hypotheses that have produced the end token.
