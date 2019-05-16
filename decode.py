@@ -408,9 +408,11 @@ def write_decode_result_in_file(result, dir_to_write):
 def write_probs_result_in_file(result, dir_to_write):
   output_file_name = os.path.basename(FLAGS.data_path).replace("input", "logs")
   with open(os.path.join(dir_to_write, output_file_name), "w", encoding="utf-8") as f:
-    for idx, r in enumerate(result):
-      f.write("第%i篇文章：\n" % idx)
-      f.write("预测词语： %s \n" % " ".join(r.words))
-      f.write("最终概率： %s \n" % " ".join(r.log_probs))
-      f.write("生成概率： %s \n" % " ".join(r.gen_probs))
-      f.write("抽取概率： %s \n\n\n" % " ".join(r.cpy_probs))
+    for idx, rs in enumerate(result):
+      f.write("第%i篇文章：\n\n" % (idx + 1))
+      for i, r in enumerate(rs):
+        f.write("预测词%i： %s \n" % (i + 1, " ".join(r["words"])))
+        f.write("最终概率： %s \n" % " ".join(r["log_probs"]))
+        f.write("生成概率： %s \n" % " ".join(r["gen_probs"]))
+        f.write("抽取概率： %s \n\n" % " ".join(r["cpy_probs"]))
+      f.write("\n\n\n\n")
