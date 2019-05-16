@@ -105,8 +105,9 @@ def run_beam_search(sess, model, vocab, batch):
                      state=dec_in_state,
                      attn_dists=[],
                      p_gens=[],
-                     coverage=np.zeros([batch.enc_batch.shape[1]]) # zero vector of length attention_length
-                     ) for _ in range(FLAGS.beam_size)]
+                     coverage=np.zeros([batch.enc_batch.shape[1]]), # zero vector of length attention_length
+                     gen_probs=[0.0],
+                     cpy_probs=[0,0]) for _ in range(FLAGS.beam_size)]
   results = [] # this will contain finished hypotheses (those that have emitted the [STOP] token)
 
   steps = 0
