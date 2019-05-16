@@ -274,7 +274,9 @@ class SummarizationModel(object):
           final_dists = attn_dists_projected
         else:
           final_dists = [vocab_dist + copy_dist for (vocab_dist, copy_dist) in zip(vocab_dists_extended, attn_dists_projected)]
-
+          if hps.mode == "decode":
+            self._vocab_dist = vocab_dist[0]
+            self._copy_dist = copy_dist[0]
       return final_dists
 
   def _add_emb_vis(self, embedding_var):
@@ -552,6 +554,8 @@ class SummarizationModel(object):
       feed[self._enc_batch_extend_vocab] = batch.enc_batch_extend_vocab
       feed[self._max_art_oovs] = batch.max_art_oovs
       to_return['p_gens'] = self.p_gens
+      to_return['vocab_dist'] = self._vocab_dist
+      to_return['copy_dist'] = self._copy_dist
       if hps.co_occurrence or hps.prev_relation or hps.co_occurrence_h or hps.markov_attention or hps.markov_attention_contribution:
         feed[self._cooccurrence_matrix] = batch.cooccurrence_matrix
       if hps.co_occurrence_i or (hps.coverage and hps.coverage_weighted) or hps.attention_weighted or hps.markov_attention or hps.markov_attention_contribution:
@@ -592,7 +596,14 @@ class SummarizationModel(object):
     else:
       new_coverage = [None for _ in range(beam_size)]
 
-    return results['ids'], results['probs'], new_states, attn_dists, p_gens, new_coverage
+    cpy_probs = []
+    gen_probs = []
+
+    for idx, ids in enumerate(results['id']):
+      cpy_probs.append([results['copy_dist'][idx][i] for i in ids])
+      gen_probs.append([results['vocab_dist'][idx][i] for i in ids])
+
+    return results['ids'], results['probs'], new_states, attn_dists, p_gens, new_coverage, gen_probs, cpy_probs
 
 
 def _mask_and_avg(values, padding_mask):

@@ -40,7 +40,7 @@ class KeyphrasesHandler(object):
     write_to_input_file(article_list)
 
     try:
-      subprocess.check_call(["python", "run_summarization.py", "--data_path=%s" % os.path.join(DATA_PATH, INPUT_FILE)])
+      subprocess.check_call(["python", "run_summarization.py", "--data_path=%s" % os.path.join(DATA_PATH, INPUT_FILE), "--decode_only=True"])
     except subprocess.CalledProcessError:
       return []
 
