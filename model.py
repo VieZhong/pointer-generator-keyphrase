@@ -599,7 +599,7 @@ class SummarizationModel(object):
     cpy_probs = []
     gen_probs = []
 
-    for idx, ids in enumerate(results['id']):
+    for idx, ids in enumerate(results['ids']):
       cpy_probs.append([results['copy_dist'][idx][i] for i in ids])
       gen_probs.append([results['vocab_dist'][idx][i] for i in ids])
 
