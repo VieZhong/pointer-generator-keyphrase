@@ -275,8 +275,8 @@ class SummarizationModel(object):
         else:
           final_dists = [vocab_dist + copy_dist for (vocab_dist, copy_dist) in zip(vocab_dists_extended, attn_dists_projected)]
           if self._hps.mode == "decode":
-            self._vocab_dist = vocab_dist[0]
-            self._copy_dist = copy_dist[0]
+            self._vocab_dist = vocab_dists_extended[0]
+            self._copy_dist = attn_dists_projected[0]
       return final_dists
 
   def _add_emb_vis(self, embedding_var):
