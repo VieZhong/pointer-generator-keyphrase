@@ -274,7 +274,7 @@ class SummarizationModel(object):
           final_dists = attn_dists_projected
         else:
           final_dists = [vocab_dist + copy_dist for (vocab_dist, copy_dist) in zip(vocab_dists_extended, attn_dists_projected)]
-          if hps.mode == "decode":
+          if self._hps.mode == "decode":
             self._vocab_dist = vocab_dist[0]
             self._copy_dist = copy_dist[0]
       return final_dists

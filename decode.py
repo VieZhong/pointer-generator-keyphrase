@@ -405,7 +405,7 @@ def write_decode_result_in_file(result, dir_to_write):
       f.write("%s\n" % json.dumps(r, ensure_ascii=False))
 
 
-def write_probs_result_in_file(result, dir_to_write)
+def write_probs_result_in_file(result, dir_to_write):
   output_file_name = os.path.basename(FLAGS.data_path).replace("input", "logs")
   with open(os.path.join(dir_to_write, output_file_name), "w", encoding="utf-8") as f:
     for idx, r in enumerate(result):

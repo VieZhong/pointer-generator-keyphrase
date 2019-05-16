@@ -9,7 +9,7 @@ import os
 import subprocess
 
 HOST = '192.168.101.4'
-PORT = 8084
+PORT = 8085
 
 DATA_PATH = '/tmp'
 INPUT_FILE = 'tmp_input_%i.txt' % PORT

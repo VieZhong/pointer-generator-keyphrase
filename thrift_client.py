@@ -11,7 +11,7 @@ from thrift.transport import TSocket
 from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
 
-transport = TSocket.TSocket('192.168.101.4', 8084)
+transport = TSocket.TSocket('192.168.101.4', 8085)
 transport = TTransport.TBufferedTransport(transport)
 protocol = TBinaryProtocol.TBinaryProtocol(transport)
 client = KeyphraseModel.Client(protocol)
