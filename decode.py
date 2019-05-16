@@ -131,16 +131,16 @@ class BeamSearchDecoder(object):
           # Remove the [STOP] token from decoded_words, if necessary
           while len(decoded_words_1) and decoded_words_1[0] in [',', '.', '-lrb-', data.STOP_DECODING]:
             decoded_words_1 = decoded_words_1[1:]
-            log_probs = hyp.log_probs[1:]
-            cpy_probs = hyp.cpy_probs[1:]
-            gen_probs = hyp.gen_probs[1:]
+            log_probs = log_probs[1:]
+            cpy_probs = cpy_probs[1:]
+            gen_probs = gen_probs[1:]
           for symbol in [',', '.', '-lrb-', data.STOP_DECODING]:
             try:
               stop_idx = decoded_words_1.index(symbol) # index of the (first) [STOP] symbol
               decoded_words_1 = decoded_words_1[:stop_idx]
-              log_probs = hyp.log_probs[:stop_idx]
-              cpy_probs = hyp.cpy_probs[:stop_idx]
-              gen_probs = hyp.gen_probs[:stop_idx]
+              log_probs = log_probs[:stop_idx]
+              cpy_probs = cpy_probs[:stop_idx]
+              gen_probs = gen_probs[:stop_idx]
             except ValueError:
               continue
           if not len(decoded_words_1) or (len(decoded_words) and decoded_words_1[0] in [words[0] for words in decoded_words]) or '[UNK]' in decoded_words_1 or '<digit>' in decoded_words_1:
