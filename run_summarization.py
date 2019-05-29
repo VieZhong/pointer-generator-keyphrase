@@ -44,7 +44,7 @@ tf.app.flags.DEFINE_boolean('single_pass', True, 'For decode mode only. If True,
 tf.app.flags.DEFINE_boolean('decode_only', True, 'If True, only decode, do not calculate f1 score. only for chinese, only for special format data_path')
 
 # Where to save output
-tf.app.flags.DEFINE_string('log_root', '/project/pointer-generator-keyphrase/model/', 'Root directory for all logging.')
+tf.app.flags.DEFINE_string('log_root', '/data/nssd_data/model/', 'Root directory for all logging.')
 tf.app.flags.DEFINE_string('exp_name', 'nssd_COPM_experiment', 'Name for experiment. Logs will be saved in a directory with this name, under log_root.')
 tf.app.flags.DEFINE_string('language', 'chinese', 'language')
 
