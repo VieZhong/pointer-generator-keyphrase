@@ -8,13 +8,6 @@ import json
 import os
 import subprocess
 
-HOST = '192.168.101.4'
-PORT = 8084
-
-DATA_PATH = '/tmp'
-INPUT_FILE = 'tmp_input_%i.txt' % PORT
-OUTPUT_FILE = 'tmp_output_%i.txt' % PORT
-
 
 def write_to_input_file(article_list):
   with open(os.path.join(DATA_PATH, INPUT_FILE), "w", encoding='utf-8') as writer:
@@ -50,6 +43,17 @@ class KeyphrasesHandler(object):
 
 
 if __name__ == '__main__':
+
+  if len(sys.argv) > 2:
+    HOST = sys.argv[2]
+
+  if len(sys.argv) > 3:
+    PORT = sys.argv[3]
+
+  DATA_PATH = '/tmp'
+  INPUT_FILE = 'tmp_input_%i.txt' % PORT
+  OUTPUT_FILE = 'tmp_output_%i.txt' % PORT
+
   handler = KeyphrasesHandler()
 
   processor = KeyphraseModel.Processor(handler)

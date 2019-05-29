@@ -31,4 +31,4 @@ FTP上有Thrift Server所需要的用nssd数据集预训练好的模型，目录
 
 在运行下面脚本时，请确保模型处于decode模式，并且decode_only与single_pass均为True。
 
-    python thrift_server.py
+    python thrift_server.py ${IP} ${PORT}
