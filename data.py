@@ -30,6 +30,10 @@ from tensorflow.core.example import example_pb2
 from collections import OrderedDict
 from nltk.tokenize import word_tokenize
 
+import nltk
+nltk.download('punkt')
+
+
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
 SENTENCE_START = '<s>'
 SENTENCE_END = '</s>'
