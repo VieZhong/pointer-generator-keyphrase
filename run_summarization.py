@@ -30,9 +30,6 @@ from decode import BeamSearchDecoder
 import util
 from tensorflow.python import debug as tf_debug
 
-import nltk
-nltk.download('punkt')
-
 FLAGS = tf.app.flags.FLAGS
 
 # Where to find data
