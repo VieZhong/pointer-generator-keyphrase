@@ -47,7 +47,7 @@ if __name__ == '__main__':
   if len(sys.argv) > 2:
     HOST = sys.argv[2]
   else:
-    HOST = 192.168.101.4
+    HOST = "192.168.101.4"
 
   if len(sys.argv) > 3:
     PORT = sys.argv[3]
