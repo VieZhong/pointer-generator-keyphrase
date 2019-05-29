@@ -7,6 +7,7 @@ from thrift.server import TServer
 import json
 import os
 import subprocess
+import sys
 
 
 def write_to_input_file(article_list):
@@ -23,7 +24,6 @@ def read_from_output_file():
       if line:
         results.append(json.loads(line))
   return results
-  
 
 
 class KeyphrasesHandler(object):
