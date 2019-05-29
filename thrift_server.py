@@ -52,11 +52,11 @@ if __name__ == '__main__':
   if len(sys.argv) > 2:
     PORT = sys.argv[2]
   else:
-    PORT = 8084
+    PORT = "8084"
 
   DATA_PATH = '/tmp'
-  INPUT_FILE = 'tmp_input_%i.txt' % PORT
-  OUTPUT_FILE = 'tmp_output_%i.txt' % PORT
+  INPUT_FILE = 'tmp_input_%s.txt' % PORT
+  OUTPUT_FILE = 'tmp_output_%s.txt' % PORT
 
   handler = KeyphrasesHandler()
 
